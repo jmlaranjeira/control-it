@@ -1,0 +1,58 @@
+const loginData = {
+  User: {
+    FullName: "IVAN   PALLEIRO PEREZ",
+    CompanyId: "c033d825-64d1-4803-96a8-d049d6492853",
+    AccessToken:
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VySWQiOiJlMGIxMDM3NS1jZGQzLTRjNjktYjQ5MS00Njg3MjFjYzNjNmQiLCJDb21wYW55SWQiOiJjMDMzZDgyNS02NGQxLTQ4MDMtOTZhOC1kMDQ5ZDY0OTI4NTMiLCJBcHBUeXBlIjoiVW5rbm93biIsIm5iZiI6MTY5NDYwNDk5MywiZXhwIjoxNjk1NDY4OTkzLCJpYXQiOjE2OTQ2MDQ5OTN9.B5FwlySHfIuSv_g9XuwV2arXcW-6bv_4Ulrt3Jdwwns",
+    ExpiresIn: 864000,
+  },
+  EventTypes: [
+    {
+      EventTypeId: "28ae6f7e-d3de-480b-8df0-4e8dfbe4552c",
+      EventId: "00000000-0000-0000-0000-000000000000",
+      StartDate: null,
+      Name: "PAUSA",
+      IsPrincipal: false,
+      Order: 0,
+      IsInit: false,
+    },
+    {
+      EventTypeId: "e8e54e66-a996-48f2-8885-b0dbcacb86eb",
+      EventId: "83faef9b-7505-4f5d-9b02-e1fa859d521e",
+      StartDate: "2023-09-08T14:00:00+02:00",
+      Name: "Comida",
+      IsPrincipal: false,
+      Order: 0,
+      IsInit: false,
+    },
+    {
+      EventTypeId: "d8cc9d74-ef29-4267-906b-24fda81e87ec",
+      EventId: "1cd64106-88c9-4f0d-beb8-17408fb8ecc0",
+      StartDate: "2023-09-08T08:00:00+02:00",
+      Name: "Jornada",
+      IsPrincipal: true,
+      Order: 1,
+      IsInit: false,
+    },
+  ],
+  LastEvent: {
+    EventTypeId: "e8e54e66-a996-48f2-8885-b0dbcacb86eb",
+    IsInit: false,
+  },
+  Configuration: [
+    { Key: "MaxOffset", Value: "" },
+    { Key: "MaxWorkMinutes", Value: "" },
+    { Key: "EnableGeolocationTracking", Value: "1" },
+    { Key: "GeolocationMandatory", Value: "0" },
+    { Key: "EnableUUIDTracking", Value: "1" },
+    { Key: "EnableOSTracking", Value: "1" },
+    { Key: "DisplayTempDisabilityMenuOption", Value: "1" },
+    { Key: "DisplayTasksMenuOption", Value: "0" },
+    { Key: "DisplayVacationMenuOption", Value: "0" },
+    { Key: "DisplayApprovalsMenuOption", Value: "0" },
+  ],
+  Environment: "Production",
+  Success: true,
+  ErrorCode: 0,
+  Message: null,
+};
