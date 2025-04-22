@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Registro de Horas</title>
+</head>
+<body>
+  <h1>Completar horas</h1>
+  <div id="loading" style="display:none; text-align:center; margin: 20px;">
+    <p>Cargando datos, por favor espera...</p>
+  </div>
+  
+  <% if (isLoading) { %>
+    <div style="text-align: center; margin: 20px;">
+      <p>Cargando calendario, por favor espera...</p>
+    </div>
+  <% } %>
+
+  <form method="POST" action="/submit">
+    <label>Fecha inicio:
+      <input type="date" name="startDate" required value="<%= startDate ?? '' %>">
+    </label><br><br>
+
+    <label>Fecha fin:
+      <input type="date" name="endDate" required value="<%= endDate ?? '' %>">
+    </label><br><br>
+
+    <label>
+      <input type="checkbox" name="dryRun" checked>
+      Modo simulación (no enviar)
+    </label><br><br>
+
+    <button type="submit">Enviar</button>
+  </form>
+
+  <% if (calendarData) { %>
+    <% 
+      const groupedByMonth = {};
+      calendarData.forEach(day => {
+        const monthKey = day.date.slice(0, 7); // "YYYY-MM"
+        if (!groupedByMonth[monthKey]) {
+          groupedByMonth[monthKey] = [];
+        }
+        groupedByMonth[monthKey].push(day);
+      });
+
+      const monthNames = {
+        "01": "Enero", "02": "Febrero", "03": "Marzo", "04": "Abril",
+        "05": "Mayo", "06": "Junio", "07": "Julio", "08": "Agosto",
+        "09": "Septiembre", "10": "Octubre", "11": "Noviembre", "12": "Diciembre"
+      };
+    %>
+
+    <style>
+      .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 10px; margin-bottom: 30px; }
+      .calendar-day { padding: 8px; border: 1px solid #ccc; text-align: center; }
+      .registered { background-color: #d4edda; }
+      .pending { background-color: #f8d7da; }
+      .holiday { background-color: #ff7b00; }
+      .dry-run { background-color: #ffeeba; }
+      .simulated { background-color: #fff3cd; }
+    </style>
+
+    <h2>Calendario</h2>
+    <% Object.keys(groupedByMonth).forEach(monthKey => { 
+         const [year, month] = monthKey.split('-'); 
+         const monthLabel = monthNames[month] + ' ' + year;
+    %>
+      <h3><%= monthLabel %></h3>
+      <div class="calendar">
+        <% groupedByMonth[monthKey].forEach(day => {
+             const isDryRun = Array.isArray(results) && results.some(r => r.date === day.date && r.dryRun); 
+        %>
+          <div class="calendar-day <%= day.status %> <%= day.isHoliday ? 'holiday' : '' %> <%= isDryRun ? 'simulated' : '' %>"><%= day.date.slice(8) %></div>
+        <% }) %>
+      </div>
+    <% }) %>
+  <% } %>
+</script>
+  <script>
+    const form = document.querySelector('form');
+    const loadingDiv = document.getElementById('loading');
+
+    form.addEventListener('submit', () => {
+      loadingDiv.style.display = 'block';
+    });
+  </script>
+  
+</body>
+</html>
