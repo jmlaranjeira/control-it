@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import bodyParser from 'body-parser';
-import { submitHoursRange, getRegisteredDays } from './logic.js';
+import { submitHoursRange, getRegisteredDaysFromReport, getRegisteredDays } from './logic.js';
 
 // Placeholder for holiday checking logic
 async function checkIfHoliday(date) {
@@ -30,19 +30,18 @@ app.get('/', async (req, res) => {
     const endISO = today.toISOString().slice(0, 10);
 
     const registered = await getRegisteredDays(startISO, endISO);
-
     const calendarData = [];
     let cursor = new Date(startDate);
     while (cursor <= today) {
       const iso = cursor.toISOString().slice(0, 10);
       const day = cursor.getDay();
       const find = registered.find(r => r.date === iso);
-
-      if ((day >= 1 && day <= 5)) {
+      if ((day >= 1 && day <= 5) || find?.isHoliday) {
+        const isHoliday = !!find?.isHoliday;
         calendarData.push({
           date: iso,
-          status: find?.isHoliday ? 'holiday' : (find ? 'registered' : 'pending'),
-          isHoliday: find?.isHoliday,
+          status: isHoliday ? 'holiday' : (find?.status || 'pending'),
+          isHoliday,
         });
       }
       cursor.setHours(12); 
@@ -79,10 +78,11 @@ app.post('/submit', async (req, res) => {
       const find = registered.find(r => r.date === iso);
        
       if ((day >= 1 && day <= 5) || find?.isHoliday) {
+        const isHoliday = !!find?.isHoliday;
         calendarData.push({
           date: iso,
-          status: find?.isHoliday ? 'holiday' : (find ? 'registered' : 'pending'),
-          isHoliday: find?.isHoliday,
+          status: isHoliday ? 'holiday' : (find?.status || 'pending'),
+          isHoliday,
         });
       }
       cursor.setHours(12);

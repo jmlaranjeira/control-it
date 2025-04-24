@@ -2,6 +2,7 @@ import { DateTime } from 'luxon';
 import fetch from 'node-fetch';
 import config from './config.js';
 import FormData from 'form-data';
+import cheerio from 'cheerio';
 
 const comidaEventTypeId = 'e8e54e66-a996-48f2-8885-b0dbcacb86eb';
 const jornadaEventTypeId = 'd8cc9d74-ef29-4267-906b-24fda81e87ec';
@@ -120,7 +121,8 @@ export async function submitHoursRange({ startDate, endDate, dryRun = true }) {
     results.push({
       date: day.toISODate(),
       status: dryRun ? 'dry-run' : 'submitted',
-      dryRun: dryRun
+      dryRun: dryRun,
+      isHoliday: vacationDays.includes(day.toISODate())
     });
   }
 
@@ -132,57 +134,32 @@ function randomJitter() {
 }
 
 export async function getRegisteredDays(startDate, endDate) {
-  const token = await login(config.username, config.password);
-
+  const [vacationDays, registeredFromReport] = await Promise.all([
+    getVacationDays(),
+    getRegisteredDaysFromReport(startDate, endDate)
+  ]);
   const start = DateTime.fromISO(startDate);
   const end = DateTime.fromISO(endDate);
-  const registeredDays = [];
-  const vacationDays = await getVacationDays();
-
-  let cursor = start;
-  while (cursor <= end) {
-    const isoDate = cursor.toISODate();
-    const isHoliday = vacationDays.includes(isoDate);
-
-    if (cursor.weekday >= 1 && cursor.weekday <= 5 && !isHoliday) {
-      const formattedDate = cursor.toFormat('dd-MM-yyyy');
-      const response = await fetch(`https://api.controlit.es/api/events/get-events-from-day?day=${formattedDate}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const events = await response.json();
-        if (Array.isArray(events) && events.length > 0) {
-          registeredDays.push(isoDate);
-        }
-      }
-    }
-
-    cursor = cursor.plus({ days: 1 });
-  }
-console.log('registeredDays', registeredDays);
   const calendarData = [];
-  cursor = start;
+  let cursor = start;
+
   while (cursor <= end) {
     const isoDate = cursor.toISODate();
     const isHoliday = vacationDays.includes(isoDate);
-
+    const isRegistered = registeredFromReport.includes(isoDate);
     calendarData.push({
       date: isoDate,
-      status: isHoliday ? 'holiday' : (registeredDays.includes(isoDate) ? 'registered' : 'pending'),
-      isHoliday: isHoliday,
+      status: isHoliday ? 'holiday' : (isRegistered ? 'registered' : 'pending'),
+      isHoliday: isHoliday
     });
 
     cursor = cursor.plus({ days: 1 });
   }
-
   return calendarData;
 }
 
 export async function getDetailedEventsByRange(startDate, endDate) {
-  const registeredDays = await getRegisteredDays(startDate, endDate);
+  const registeredDays = await getRegisteredDaysFromReport(startDate, endDate);
   const results = [];
 
   const token = await login(config.username, config.password);
@@ -229,4 +206,34 @@ export async function getVacationDays() {
   return data.VacationsAnOnDutyCalendarDays
     .filter(day => day.IsHoliday || day.IsLeaveDay)
     .map(day => DateTime.fromISO(day.Day).toISODate());
+}
+
+export async function getRegisteredDaysFromReport(startDate, endDate) {
+  const token = await login(config.username, config.password);
+  const formData = new FormData();
+  formData.append('startDate', DateTime.fromISO(startDate).toFormat('dd-MM-yyyy'));
+  formData.append('endDate', DateTime.fromISO(endDate).toFormat('dd-MM-yyyy'));
+  const response = await fetch('https://controlit.es/reports/get-detailed-report', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+    body: formData
+  });
+  
+  const html = await response.text();
+  const $ = cheerio.load(html);
+  const registeredDates = [];
+  
+  $('table tbody tr').each((_, element) => {
+    const dateText = $(element).find('td').first().text().trim();
+    
+    if (dateText) {
+      const [day, month, year] = dateText.split('/');
+      const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      registeredDates.push(isoDate);
+    }
+  });
+
+  return registeredDates;
 }

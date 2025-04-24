@@ -9,7 +9,7 @@
     <p>Cargando datos, por favor espera...</p>
   </div>
   
-  <% if (isLoading) { %>
+  <% if (isLoading && (!calendarData || calendarData.length === 0)) { %>
     <div style="text-align: center; margin: 20px;">
       <p>Cargando calendario, por favor espera...</p>
     </div>
@@ -55,11 +55,20 @@
       .calendar-day { padding: 8px; border: 1px solid #ccc; text-align: center; }
       .registered { background-color: #d4edda; }
       .pending { background-color: #f8d7da; }
-      .holiday { background-color: #ff7b00; }
+      .holiday { background-color: #ffe0b2; }
       .dry-run { background-color: #ffeeba; }
       .simulated { background-color: #fff3cd; }
     </style>
 
+    <div style="margin-bottom: 20px;">
+      <strong>Leyenda:</strong>
+      <div style="display: flex; gap: 10px; margin-top: 5px;">
+        <div style="background-color: #d4edda; padding: 4px 8px;">Registrado</div>
+        <div style="background-color: #f8d7da; padding: 4px 8px;">Pendiente</div>
+        <div style="background-color: #ffe0b2; padding: 4px 8px;">Festivo</div>
+        <div style="background-color: #fff3cd; padding: 4px 8px;">Simulado</div>
+      </div>
+    </div>
     <h2>Calendario</h2>
     <% Object.keys(groupedByMonth).forEach(monthKey => { 
          const [year, month] = monthKey.split('-'); 
