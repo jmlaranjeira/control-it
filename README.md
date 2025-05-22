@@ -46,6 +46,20 @@ A lightweight, custom-built frontend to simplify and automate daily work hour re
 ```bash
 npm install
 npm run dev
+```
+
+### Configuration
+
+Before running the app with Docker, update the `config.js` file with your ControlIT username and password:
+```js
+// config.js
+export const config = {
+  user: 'your_username',
+  password: 'your_password'
+};
+```
+
+This step is required to enable authenticated requests when using the app inside Docker.
 
 ## Docker
 
