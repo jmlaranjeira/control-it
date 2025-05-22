@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Registro de Horas</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; color: #333; margin: 0; padding: 20px; }
+    h1, h2, h3 { color: #222; }
+    form { max-width: 500px; margin: 20px auto; padding: 20px; background-color: #f9f9f9; border-radius: 8px; border: 1px solid #ddd; }
+    form label { display: block; margin-bottom: 15px; }
+    form input[type="date"], form input[type="checkbox"] { margin-left: 10px; }
+    form button {
+      background-color: #1976d2;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    form button:hover {
+      background-color: #155a9e;
+    }
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      margin-top: 10px;
+      margin-bottom: 30px;
+    }
+    .calendar-day {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      text-align: center;
+      transition: transform 0.1s ease;
+      font-weight: 500;
+    }
+    .calendar-day:hover {
+      transform: scale(1.05);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+    }
+    .registered { background-color: #c8e6c9; }
+    .pending { background-color: #ffcdd2; }
+    .holiday { background-color: #ffe0b2; }
+    .simulated { background-color: #fff9c4; }
+    .legend-box {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+  <h1>Completar horas</h1>
+  <div id="loading" style="display:none; text-align:center; margin: 20px;">
+    <p>Cargando datos, por favor espera...</p>
+  </div>
+  
+  <% if (isLoading && (!calendarData || calendarData.length === 0)) { %>
+    <div style="text-align: center; margin: 20px;">
+      <p>Cargando calendario, por favor espera...</p>
+    </div>
+  <% } %>
+
+  <form method="POST" action="/submit">
+    <label>Fecha inicio:
+      <input type="date" name="startDate" required value="<%= startDate ?? '' %>">
+    </label><br><br>
+
+    <label>Fecha fin:
+      <input type="date" name="endDate" required value="<%= endDate ?? '' %>">
+    </label><br><br>
+
+    <label>
+      <input type="checkbox" name="dryRun" checked>
+      Modo simulación (no enviar)
+    </label><br><br>
+
+    <button type="submit">Enviar</button>
+  </form>
+
+  <% if (calendarData) { %>
+    <% 
+      const groupedByMonth = {};
+      calendarData.forEach(day => {
+        const monthKey = day.date.slice(0, 7); // "YYYY-MM"
+        if (!groupedByMonth[monthKey]) {
+          groupedByMonth[monthKey] = [];
+        }
+        groupedByMonth[monthKey].push(day);
+      });
+
+      const monthNames = {
+        "01": "Enero", "02": "Febrero", "03": "Marzo", "04": "Abril",
+        "05": "Mayo", "06": "Junio", "07": "Julio", "08": "Agosto",
+        "09": "Septiembre", "10": "Octubre", "11": "Noviembre", "12": "Diciembre"
+      };
+    %>
+
+    <div style="margin-bottom: 20px;">
+      <strong>Leyenda:</strong>
+      <div style="display: flex; gap: 10px; margin-top: 5px;">
+        <div class="legend-box" style="background-color: #c8e6c9;">Registrado</div>
+        <div class="legend-box" style="background-color: #ffcdd2;">Pendiente</div>
+        <div class="legend-box" style="background-color: #ffe0b2;">Festivo</div>
+        <div class="legend-box" style="background-color: #fff9c4;">Simulado</div>
+      </div>
+    </div>
+    <h2>Calendario</h2>
+    <% Object.keys(groupedByMonth).forEach(monthKey => { 
+         const [year, month] = monthKey.split('-'); 
+         const monthLabel = monthNames[month] + ' ' + year;
+    %>
+      <h3><%= monthLabel %></h3>
+      <div class="calendar">
+        <% groupedByMonth[monthKey].forEach(day => {
+             const isDryRun = Array.isArray(results) && results.some(r => r.date === day.date && r.dryRun); 
+        %>
+          <div class="calendar-day <%= day.status %> <%= day.isHoliday ? 'holiday' : '' %> <%= isDryRun ? 'simulated' : '' %>"><%= day.date.slice(8) %></div>
+        <% }) %>
+      </div>
+    <% }) %>
+  <% } %>
+</script>
+  <script>
+    const form = document.querySelector('form');
+    const loadingDiv = document.getElementById('loading');
+
+    form.addEventListener('submit', () => {
+      loadingDiv.style.display = 'block';
+    });
+  </script>
+  
+</body>
+</html>
