@@ -1,19 +1,76 @@
 import request from 'supertest';
-import express from 'express';
-import { jest } from '@jest/globals';
-
-// Mock the logic module
-jest.mock('../logic.js', () => ({
-  getRegisteredDays: jest.fn(),
-}));
-
 import app from '../server.js';
-import { getRegisteredDays } from '../logic.js';
 
-describe('Server Routes', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
+describe('Server', () => {
+  describe('GET /', () => {
+    it('should return 200', async () => {
+      const response = await request(app).get('/');
+      expect(response.status).toBe(200);
+      expect(response.headers['content-type']).toMatch(/html/);
+    });
   });
+
+  describe('GET /health', () => {
+    it('should return health status', async () => {
+      const response = await request(app).get('/health');
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('status');
+      expect(response.body).toHaveProperty('timestamp');
+      expect(response.body).toHaveProperty('uptime');
+      expect(response.body).toHaveProperty('version');
+    });
+  });
+
+  describe('GET /health/live', () => {
+    it('should return liveness status', async () => {
+      const response = await request(app).get('/health/live');
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('status', 'alive');
+    });
+  });
+
+  describe('GET /health/ready', () => {
+    it('should return readiness status', async () => {
+      const response = await request(app).get('/health/ready');
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('status');
+    });
+  });
+
+  describe('GET /health/cache', () => {
+    it('should return cache statistics', async () => {
+      const response = await request(app).get('/health/cache');
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('status', 'cache_stats');
+      expect(response.body).toHaveProperty('cache');
+    });
+  });
+
+  describe('POST /submit', () => {
+    it('should handle form submission', async () => {
+      const response = await request(app)
+        .post('/submit')
+        .send('startDate=2023-01-01&endDate=2023-01-02&dryRun=on');
+      expect(response.status).toBe(200);
+    });
+
+    it('should validate date range', async () => {
+      const response = await request(app)
+        .post('/submit')
+        .send('startDate=invalid&endDate=2023-01-02');
+      expect(response.status).toBe(400);
+    });
+  });
+
+  describe('GET /metrics', () => {
+    it('should return Prometheus metrics', async () => {
+      const response = await request(app).get('/metrics');
+      expect(response.status).toBe(200);
+      expect(response.headers['content-type']).toMatch(/text\/plain/);
+      expect(response.text).toContain('# HELP');
+    });
+  });
+});
 
   describe('GET /', () => {
     test('should render index page successfully', async () => {

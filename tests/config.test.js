@@ -1,12 +1,36 @@
 import config from '../config.js';
 
-describe('Configuration', () => {
-  const originalEnv = process.env;
-
-  beforeEach(() => {
-    jest.resetModules();
-    process.env = { ...originalEnv };
+describe('Config', () => {
+  it('should have required properties', () => {
+    expect(config).toHaveProperty('username');
+    expect(config).toHaveProperty('password');
+    expect(config).toHaveProperty('apiBaseUrl');
+    expect(config).toHaveProperty('reportsBaseUrl');
   });
+
+  it('should have valid URLs', () => {
+    expect(config.apiBaseUrl).toMatch(/^https?:\/\//);
+    expect(config.reportsBaseUrl).toMatch(/^https?:\/\//);
+  });
+
+  it('should have default values for optional properties', () => {
+    expect(config).toHaveProperty('jitterMinutes');
+    expect(config).toHaveProperty('workSchedule');
+    expect(config).toHaveProperty('summerStartDay');
+    expect(config).toHaveProperty('summerStartMonth');
+  });
+
+  it('should have valid work schedule configuration', () => {
+    expect(config.workSchedule).toHaveProperty('winter');
+    expect(config.workSchedule).toHaveProperty('summer');
+    expect(config.workSchedule).toHaveProperty('lunch');
+
+    expect(config.workSchedule.winter).toHaveProperty('start');
+    expect(config.workSchedule.winter).toHaveProperty('length');
+    expect(config.workSchedule.summer).toHaveProperty('start');
+    expect(config.workSchedule.summer).toHaveProperty('length');
+  });
+});
 
   afterEach(() => {
     process.env = originalEnv;
