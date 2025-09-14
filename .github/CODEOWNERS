@@ -1,0 +1,24 @@
+# Code owners for automated PR reviews
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global owners
+* @your-username
+
+# Backend/API specific
+server.js @your-username
+logic.js @your-username
+utils/ @your-username
+
+# Frontend/UI specific
+views/ @your-username
+public/ @your-username
+
+# Infrastructure/DevOps
+docker-compose*.yml @your-username
+Dockerfile* @your-username
+.github/ @your-username
+scripts/ @your-username
+
+# Security sensitive files
+.env* @your-username
+config.js @your-username

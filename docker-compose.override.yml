@@ -1,0 +1,41 @@
+# Development override for docker-compose
+# This file contains development-specific configurations
+
+version: '3.8'
+
+services:
+  controlit-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev-dependencies
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+    command: npm run dev
+    ports:
+      - "3000:3000"
+      - "9229:9229"  # Debug port
+
+  postgres:
+    ports:
+      - "5432:5432"  # Expose postgres port for development
+
+  redis:
+    ports:
+      - "6379:6379"  # Expose redis port for development
+
+  # Development database admin
+  adminer:
+    image: adminer:latest
+    container_name: controlit-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    networks:
+      - controlit-network
+    depends_on:
+      - postgres

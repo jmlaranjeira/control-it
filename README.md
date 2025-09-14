@@ -93,12 +93,40 @@ To enable HTTPS for secure communication:
 
 **Note**: For production, use certificates from a trusted Certificate Authority.
 
-## Docker
+## 🐳 Docker Deployment
 
-To run the app using Docker Compose:
-
+### Production Stack
 ```bash
-docker-compose up
+# Build production image
+npm run docker:build
+
+# Run production stack
+npm run docker:prod
+
+# Deploy to staging
+npm run deploy:staging
+
+# Deploy to production
+npm run deploy:production
+```
+
+### Production Architecture
+The production setup includes:
+- **Node.js Application**: Optimized container with health checks
+- **PostgreSQL**: Database for data persistence
+- **Redis**: Caching and session storage
+- **Nginx**: Reverse proxy with SSL termination
+- **Prometheus**: Metrics collection
+- **Grafana**: Dashboard visualization
+- **Backup Service**: Automated backup management
+
+### Environment-Specific Deployments
+```bash
+# Staging deployment
+./scripts/deploy.sh staging controlit-app:latest
+
+# Production deployment
+./scripts/deploy.sh production controlit-app:v1.2.3
 ```
 
 ### Notes

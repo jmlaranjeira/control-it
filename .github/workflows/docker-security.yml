@@ -1,0 +1,49 @@
+name: Docker Image Security Scan
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  docker-security:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Build Docker image
+      run: docker build -t controlit-scan .
+
+    - name: Run Trivy container scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'image'
+        scan-ref: 'controlit-scan'
+        format: 'sarif'
+        output: 'trivy-image-results.sarif'
+        exit-code: 1
+        ignore-unfixed: true
+
+    - name: Upload Trivy image results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-image-results.sarif'
+
+    - name: Run Dockle security check
+      uses: goodwithtech/dockle-action@v1
+      with:
+        image: 'controlit-scan'
+        format: 'sarif'
+        output: 'dockle-results.sarif'
+        exit-code: 1
+        exit-level: 'WARN'
+
+    - name: Upload Dockle results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'dockle-results.sarif'
