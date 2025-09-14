@@ -48,6 +48,23 @@ npm install
 npm run dev
 ```
 
+### Testing
+
+Run the test suite:
+```bash
+npm test
+```
+
+Run tests with coverage:
+```bash
+npm run test:coverage
+```
+
+Run tests in watch mode:
+```bash
+npm run test:watch
+```
+
 ### Configuration
 
 Create a `.env` file in the root directory with your ControlIT credentials:

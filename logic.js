@@ -4,25 +4,24 @@ import config from './config.js';
 import FormData from 'form-data';
 import cheerio from 'cheerio';
 
-const comidaEventTypeId = 'e8e54e66-a996-48f2-8885-b0dbcacb86eb';
-const jornadaEventTypeId = 'd8cc9d74-ef29-4267-906b-24fda81e87ec';
-
 const currentYear = DateTime.now().year;
-const summerStart = DateTime.fromObject({ day: 15, month: 6, year: currentYear });
-const summerEnd = DateTime.fromObject({ day: 15, month: 9, year: currentYear });
-
-const workSchedule = {
-  winter: { start: { hour: 8, minute: 0 }, length: { hours: 8, minutes: 30 } },
-  lunch: { start: { hour: 14, minute: 30 }, length: { hours: 0, minutes: 30 } },
-  summer: { start: { hour: 8, minute: 0 }, length: { hours: 7, minutes: 0 } },
-};
+const summerStart = DateTime.fromObject({
+  day: config.summerStartDay,
+  month: config.summerStartMonth,
+  year: currentYear
+});
+const summerEnd = DateTime.fromObject({
+  day: config.summerEndDay,
+  month: config.summerEndMonth,
+  year: currentYear
+});
 
 function formatDate(date) {
   return date.toFormat("yyyy-MM-dd'T'HH':'mm':'ssZZ");
 }
 
 async function login(username, password) {
-  const response = await fetch('https://api.controlit.es/api/authenticate', {
+  const response = await fetch(`${config.apiBaseUrl}/authenticate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ Username: username, Password: password }),
@@ -44,7 +43,7 @@ function buildHeaders(token) {
 }
 
 async function postManualRegister(token, startDate, endDate, eventTypeId) {
-  const response = await fetch('https://api.controlit.es/api/events/manual-register', {
+  const response = await fetch(`${config.apiBaseUrl}/events/manual-register`, {
     method: 'POST',
     headers: buildHeaders(token),
     body: JSON.stringify({
@@ -94,16 +93,16 @@ export async function submitHoursRange({ startDate, endDate, dryRun = true }) {
     let workStartRaw, workEnd, lunchStart, lunchEnd;
 
     if (isShortDay) {
-      const t = workSchedule.summer.start;
+      const t = config.workSchedule.summer.start;
       workStartRaw = day.set({ hour: t.hour, minute: t.minute + randomJitter() });
-      workEnd = workStartRaw.plus(workSchedule.summer.length);
+      workEnd = workStartRaw.plus(config.workSchedule.summer.length);
     } else {
-      const t = workSchedule.winter.start;
-      const lunch = workSchedule.lunch.start;
+      const t = config.workSchedule.winter.start;
+      const lunch = config.workSchedule.lunch.start;
       workStartRaw = day.set({ hour: t.hour, minute: t.minute + randomJitter() });
-      workEnd = workStartRaw.plus(workSchedule.winter.length).plus(workSchedule.lunch.length);
+      workEnd = workStartRaw.plus(config.workSchedule.winter.length).plus(config.workSchedule.lunch.length);
       lunchStart = day.set({ hour: lunch.hour, minute: lunch.minute + randomJitter() });
-      lunchEnd = lunchStart.plus(workSchedule.lunch.length);
+      lunchEnd = lunchStart.plus(config.workSchedule.lunch.length);
     }
 
     const workStart = formatDate(workStartRaw);
@@ -112,9 +111,9 @@ export async function submitHoursRange({ startDate, endDate, dryRun = true }) {
     const lunchEndStr = lunchEnd ? formatDate(lunchEnd) : null;
 
     if (!dryRun) {
-      await postManualRegister(accessToken, workStart, workEndStr, jornadaEventTypeId);
+      await postManualRegister(accessToken, workStart, workEndStr, config.jornadaEventTypeId);
       if (lunchStartStr && lunchEndStr) {
-        await postManualRegister(accessToken, lunchStartStr, lunchEndStr, comidaEventTypeId);
+        await postManualRegister(accessToken, lunchStartStr, lunchEndStr, config.comidaEventTypeId);
       }
     }
 
@@ -130,7 +129,7 @@ export async function submitHoursRange({ startDate, endDate, dryRun = true }) {
 }
 
 function randomJitter() {
-  return Math.round(Math.random() * 10);
+  return Math.round(Math.random() * config.jitterMinutes);
 }
 
 export async function getRegisteredDays(startDate, endDate) {
@@ -166,7 +165,7 @@ export async function getDetailedEventsByRange(startDate, endDate) {
 
   for (const date of registeredDays) {
     const formattedDate = DateTime.fromISO(date).toFormat('dd-MM-yyyy');
-    const response = await fetch(`https://api.controlit.es/api/events/get-events-from-day?day=${formattedDate}`, {
+    const response = await fetch(`${config.apiBaseUrl}/events/get-events-from-day?day=${formattedDate}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
@@ -186,7 +185,7 @@ export async function getDetailedEventsByRange(startDate, endDate) {
 
 export async function getVacationDays() {
   const token = await login(config.username, config.password);
-  const response = await fetch('https://api.controlit.es/api/vacations/get-vacations-and-onduty-ranges-from-employee', {
+  const response = await fetch(`${config.apiBaseUrl}/vacations/get-vacations-and-onduty-ranges-from-employee`, {
     headers: {
       'Authorization': `Bearer ${token}`,
     },
@@ -213,7 +212,7 @@ export async function getRegisteredDaysFromReport(startDate, endDate) {
   const formData = new FormData();
   formData.append('startDate', DateTime.fromISO(startDate).toFormat('dd-MM-yyyy'));
   formData.append('endDate', DateTime.fromISO(endDate).toFormat('dd-MM-yyyy'));
-  const response = await fetch('https://controlit.es/reports/get-detailed-report', {
+  const response = await fetch(`${config.reportsBaseUrl}/get-detailed-report`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
