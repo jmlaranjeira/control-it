@@ -1,6 +1,12 @@
-import config from '../config.js';
-
 describe('Config', () => {
+  let config;
+
+  beforeEach(async () => {
+    // Clear module cache to get fresh config
+    delete require.cache[require.resolve('../config.js')];
+    config = (await import('../config.js')).default;
+  });
+
   it('should have required properties', () => {
     expect(config).toHaveProperty('username');
     expect(config).toHaveProperty('password');

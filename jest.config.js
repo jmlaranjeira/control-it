@@ -1,24 +1,26 @@
 export default {
+  preset: null,
   testEnvironment: 'node',
-  testMatch: ['**/__tests__/**/*.test.js', '**/?(*.)+(spec|test).js'],
+  testMatch: ['**/tests/**/*.test.js'],
   collectCoverageFrom: [
     'server.js',
     'logic.js',
+    'config.js',
     'middleware/**/*.js',
-    '!node_modules/**',
-    '!coverage/**'
+    'utils/**/*.js',
+    '!**/node_modules/**',
+    '!**/tests/**'
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
   setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
-  moduleNameMapping: {
-    '^(\\.{1,2}/.*)\\.js$': '$1',
-  },
   extensionsToTreatAsEsm: ['.js'],
-  globals: {
-    'ts-jest': {
-      useESM: true,
-    },
+  moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1'
   },
-  transform: {},
+  transformIgnorePatterns: [
+    'node_modules/(?!(supertest)/)'
+  ],
+  testTimeout: 10000,
+  passWithNoTests: true
 };

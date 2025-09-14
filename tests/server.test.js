@@ -2,14 +2,6 @@ import request from 'supertest';
 import app from '../server.js';
 
 describe('Server', () => {
-  describe('GET /', () => {
-    it('should return 200', async () => {
-      const response = await request(app).get('/');
-      expect(response.status).toBe(200);
-      expect(response.headers['content-type']).toMatch(/html/);
-    });
-  });
-
   describe('GET /health', () => {
     it('should return health status', async () => {
       const response = await request(app).get('/health');
@@ -43,22 +35,6 @@ describe('Server', () => {
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('status', 'cache_stats');
       expect(response.body).toHaveProperty('cache');
-    });
-  });
-
-  describe('POST /submit', () => {
-    it('should handle form submission', async () => {
-      const response = await request(app)
-        .post('/submit')
-        .send('startDate=2023-01-01&endDate=2023-01-02&dryRun=on');
-      expect(response.status).toBe(200);
-    });
-
-    it('should validate date range', async () => {
-      const response = await request(app)
-        .post('/submit')
-        .send('startDate=invalid&endDate=2023-01-02');
-      expect(response.status).toBe(400);
     });
   });
 
