@@ -1,4 +1,4 @@
 export default {
-  username: "",
-  password: "",
+  username: process.env.CONTROLIT_USERNAME || "",
+  password: process.env.CONTROLIT_PASSWORD || "",
 };
