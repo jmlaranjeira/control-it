@@ -2,6 +2,9 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import bodyParser from 'body-parser';
+import { DateTime } from 'luxon';
+import fs from 'fs';
+import https from 'https';
 import { submitHoursRange, getRegisteredDaysFromReport, getRegisteredDays } from './logic.js';
 
 // Placeholder for holiday checking logic
@@ -57,6 +60,31 @@ app.get('/', async (req, res) => {
 app.post('/submit', async (req, res) => {
   const { startDate, endDate, dryRun } = req.body;
 
+  // Input validation
+  if (!startDate || !endDate) {
+    return res.status(400).send('Start date and end date are required');
+  }
+
+  const start = DateTime.fromISO(startDate);
+  const end = DateTime.fromISO(endDate);
+
+  if (!start.isValid || !end.isValid) {
+    return res.status(400).send('Invalid date format. Use YYYY-MM-DD format.');
+  }
+
+  if (start > end) {
+    return res.status(400).send('Start date must be before or equal to end date');
+  }
+
+  const today = DateTime.now();
+  if (end > today) {
+    return res.status(400).send('End date cannot be in the future');
+  }
+
+  if (start < today.minus({ years: 1 })) {
+    return res.status(400).send('Start date cannot be more than 1 year in the past');
+  }
+
   try {
     const results = await submitHoursRange({
       startDate,
@@ -95,6 +123,17 @@ app.post('/submit', async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Servidor iniciado en http://localhost:${port}`);
-});
+const port = process.env.PORT || 3000;
+const useHttps = process.env.USE_HTTPS === 'true';
+
+if (useHttps) {
+  const key = fs.readFileSync(process.env.SSL_KEY_PATH || 'key.pem');
+  const cert = fs.readFileSync(process.env.SSL_CERT_PATH || 'cert.pem');
+  https.createServer({ key, cert }, app).listen(port, () => {
+    console.log(`Servidor HTTPS iniciado en https://localhost:${port}`);
+  });
+} else {
+  app.listen(port, () => {
+    console.log(`Servidor iniciado en http://localhost:${port}`);
+  });
+}

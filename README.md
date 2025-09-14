@@ -50,16 +50,31 @@ npm run dev
 
 ### Configuration
 
-Before running the app with Docker, update the `config.js` file with your ControlIT username and password:
-```js
-// config.js
-export const config = {
-  user: 'your_username',
-  password: 'your_password'
-};
+Create a `.env` file in the root directory with your ControlIT credentials:
+```bash
+cp .env.example .env
 ```
 
-This step is required to enable authenticated requests when using the app inside Docker.
+Then edit `.env` with your actual credentials:
+```env
+CONTROLIT_USERNAME=your_username_here
+CONTROLIT_PASSWORD=your_password_here
+```
+
+This step is required to enable authenticated requests. The `.env` file is ignored by git for security.
+
+### HTTPS Configuration (Optional)
+
+To enable HTTPS for secure communication:
+
+1. Set `USE_HTTPS=true` in your `.env` file
+2. Generate SSL certificates (for development, you can create self-signed certificates):
+   ```bash
+   openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes
+   ```
+3. Update `SSL_KEY_PATH` and `SSL_CERT_PATH` in `.env` if certificates are in different locations
+
+**Note**: For production, use certificates from a trusted Certificate Authority.
 
 ## Docker
 
