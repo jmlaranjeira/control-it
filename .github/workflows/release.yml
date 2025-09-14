@@ -26,7 +26,7 @@ jobs:
       run: npm test
 
     - name: Build application
-      run: npm run build 2>/dev/null || echo "No build script found"
+      run: echo "Build skipped - no build script needed"
 
     - name: Create Release
       uses: actions/create-release@v1

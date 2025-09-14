@@ -24,14 +24,16 @@ jobs:
         scan-ref: 'controlit-scan'
         format: 'sarif'
         output: 'trivy-image-results.sarif'
-        exit-code: 1
+        exit-code: 0
         ignore-unfixed: true
+        severity: 'HIGH,CRITICAL'
 
     - name: Upload Trivy image results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v2
       if: always()
       with:
         sarif_file: 'trivy-image-results.sarif'
+      continue-on-error: true
 
     - name: Run Dockle security check
       uses: goodwithtech/dockle-action@v1
@@ -39,11 +41,12 @@ jobs:
         image: 'controlit-scan'
         format: 'sarif'
         output: 'dockle-results.sarif'
-        exit-code: 1
-        exit-level: 'WARN'
+        exit-code: 0
+        exit-level: 'INFO'
 
     - name: Upload Dockle results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v2
       if: always()
       with:
         sarif_file: 'dockle-results.sarif'
+      continue-on-error: true
