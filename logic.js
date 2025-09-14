@@ -184,6 +184,16 @@ export async function getDetailedEventsByRange(startDate, endDate) {
 }
 
 export async function getVacationDays() {
+  const cacheKey = cacheKeys.vacationDays();
+
+  // Try to get from cache first
+  const cachedData = get(cacheKey);
+  if (cachedData) {
+    logInfo('Serving vacation days from cache');
+    return cachedData;
+  }
+
+  logInfo('Fetching vacation days from API');
   const token = await login(config.username, config.password);
   const response = await fetch(`${config.apiBaseUrl}/vacations/get-vacations-and-onduty-ranges-from-employee`, {
     headers: {
@@ -192,22 +202,39 @@ export async function getVacationDays() {
   });
 
   if (!response.ok) {
-    console.warn('No se pudo obtener el calendario de vacaciones');
+    logWarn('Failed to fetch vacation days from API', { status: response.status });
     return [];
   }
 
   const data = await response.json();
 
   if (!Array.isArray(data.VacationsAnOnDutyCalendarDays)) {
+    logWarn('Invalid vacation days response format');
     return [];
   }
 
-  return data.VacationsAnOnDutyCalendarDays
+  const vacationDays = data.VacationsAnOnDutyCalendarDays
     .filter(day => day.IsHoliday || day.IsLeaveDay)
     .map(day => DateTime.fromISO(day.Day).toISODate());
+
+  // Cache for 1 hour (3600 seconds) since vacation days don't change frequently
+  set(cacheKey, vacationDays, 3600);
+  logInfo('Cached vacation days', { count: vacationDays.length });
+
+  return vacationDays;
 }
 
 export async function getRegisteredDaysFromReport(startDate, endDate) {
+  const cacheKey = cacheKeys.registeredDays(startDate, endDate);
+
+  // Try to get from cache first
+  const cachedData = get(cacheKey);
+  if (cachedData) {
+    logInfo('Serving registered days from cache', { startDate, endDate });
+    return cachedData;
+  }
+
+  logInfo('Fetching registered days from API', { startDate, endDate });
   const token = await login(config.username, config.password);
   const formData = new FormData();
   formData.append('startDate', DateTime.fromISO(startDate).toFormat('dd-MM-yyyy'));
@@ -219,20 +246,29 @@ export async function getRegisteredDaysFromReport(startDate, endDate) {
     },
     body: formData
   });
-  
+
+  if (!response.ok) {
+    logWarn('Failed to fetch registered days report', { status: response.status, startDate, endDate });
+    return [];
+  }
+
   const html = await response.text();
   const $ = cheerio.load(html);
   const registeredDates = [];
-  
+
   $('table tbody tr').each((_, element) => {
     const dateText = $(element).find('td').first().text().trim();
-    
+
     if (dateText) {
       const [day, month, year] = dateText.split('/');
       const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
       registeredDates.push(isoDate);
     }
   });
+
+  // Cache for 30 minutes (1800 seconds) since registered days can change
+  set(cacheKey, registeredDates, 1800);
+  logInfo('Cached registered days', { startDate, endDate, count: registeredDates.length });
 
   return registeredDates;
 }
