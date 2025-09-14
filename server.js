@@ -10,6 +10,7 @@ import { errorHandler, notFound, catchAsync, validateDateRange } from './middlew
 import { logRequest } from './utils/logger.js';
 import { apiLimiter, submitLimiter } from './middleware/rateLimiter.js';
 import { getStats } from './utils/cache.js';
+import { performDependencyHealthCheck } from './utils/dependencyManager.js';
 
 // Placeholder for holiday checking logic
 async function checkIfHoliday(date) {
@@ -88,6 +89,25 @@ app.get('/health/cache', (req, res) => {
       hitRatePercentage: Math.round(stats.hitRate * 100 * 100) / 100, // Convert to percentage with 2 decimals
     },
   });
+});
+
+app.get('/health/dependencies', async (req, res) => {
+  try {
+    const healthCheck = performDependencyHealthCheck();
+    const statusCode = healthCheck.overall.status === 'healthy' ? 200 : 503;
+
+    res.status(statusCode).json({
+      status: 'dependency_health',
+      timestamp: new Date().toISOString(),
+      ...healthCheck
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'dependency_health_error',
+      timestamp: new Date().toISOString(),
+      error: error.message
+    });
+  }
 });
 
 // Request logging middleware
