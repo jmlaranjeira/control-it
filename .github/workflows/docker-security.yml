@@ -38,7 +38,7 @@ jobs:
         severity: 'HIGH,CRITICAL'
 
     - name: Run Dockle security check
-      uses: goodwithtech/dockle-action@v1.3.3
+      uses: goodwithtech/dockle-action@main
       with:
         image: 'controlit-scan'
         format: 'sarif'
