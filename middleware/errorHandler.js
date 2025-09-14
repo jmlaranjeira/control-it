@@ -1,5 +1,6 @@
 import { DateTime } from 'luxon';
 import config from '../config.js';
+import { logError } from '../utils/logger.js';
 
 /**
  * Custom Error class for application-specific errors
@@ -42,13 +43,7 @@ export const errorHandler = (err, req, res, next) => {
   error.message = err.message;
 
   // Log error
-  console.error('Error:', {
-    message: err.message,
-    stack: err.stack,
-    url: req.url,
-    method: req.method,
-    timestamp: DateTime.now().toISO(),
-  });
+  logError(err, req);
 
   // Mongoose bad ObjectId
   if (err.name === 'CastError') {
