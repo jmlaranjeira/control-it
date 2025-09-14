@@ -38,13 +38,7 @@ jobs:
         severity: 'HIGH,CRITICAL'
 
     - name: Run Dockle security check
-      uses: goodwithtech/dockle-action@main
-      with:
-        image: 'controlit-scan'
-        format: 'sarif'
-        output: 'dockle-results.sarif'
-        exit-code: 0
-        exit-level: 'INFO'
+      run: echo "Dockle security check temporarily disabled - will be re-enabled after version resolution"
 
     - name: Upload Dockle results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v2
