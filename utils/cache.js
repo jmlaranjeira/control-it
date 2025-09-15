@@ -1,4 +1,5 @@
 import NodeCache from 'node-cache';
+import { recordCacheHit, recordCacheMiss } from './metrics.js';
 import { logInfo, logWarn } from './logger.js';
 
 // Create cache instance with default TTL of 10 minutes

@@ -11,6 +11,9 @@ import { logRequest } from './utils/logger.js';
 import { apiLimiter, submitLimiter } from './middleware/rateLimiter.js';
 import { getStats } from './utils/cache.js';
 import { performDependencyHealthCheck } from './utils/dependencyManager.js';
+import { metricsMiddleware, getMetrics, recordError, recordApiCall } from './utils/metrics.js';
+import { scheduleBackups, getBackupStats } from './utils/backup.js';
+import { initDatabase, healthCheck as dbHealthCheck, auditLogs } from './utils/database.js';
 
 // Placeholder for holiday checking logic
 async function checkIfHoliday(date) {
@@ -102,6 +105,7 @@ app.get('/health/dependencies', async (req, res) => {
       ...healthCheck
     });
   } catch (error) {
+    recordError('dependency_check', req.path);
     res.status(500).json({
       status: 'dependency_health_error',
       timestamp: new Date().toISOString(),
@@ -109,6 +113,57 @@ app.get('/health/dependencies', async (req, res) => {
     });
   }
 });
+
+app.get('/health/backups', (req, res) => {
+  try {
+    const backupStats = getBackupStats();
+    res.status(200).json({
+      status: 'backup_stats',
+      timestamp: new Date().toISOString(),
+      ...backupStats
+    });
+  } catch (error) {
+    recordError('backup_stats', req.path);
+    res.status(500).json({
+      status: 'backup_stats_error',
+      timestamp: new Date().toISOString(),
+      error: error.message
+    });
+  }
+});
+
+app.get('/health/database', async (req, res) => {
+  try {
+    const dbHealth = await dbHealthCheck();
+    const statusCode = dbHealth.status === 'healthy' ? 200 : 503;
+    res.status(statusCode).json({
+      status: 'database_health',
+      timestamp: new Date().toISOString(),
+      database: dbHealth
+    });
+  } catch (error) {
+    recordError('database_health', req.path);
+    res.status(500).json({
+      status: 'database_health_error',
+      timestamp: new Date().toISOString(),
+      error: error.message
+    });
+  }
+});
+
+// Prometheus metrics endpoint
+app.get('/metrics', async (req, res) => {
+  try {
+    res.set('Content-Type', promClient.register.contentType);
+    res.end(await getMetrics());
+  } catch (error) {
+    recordError('metrics_endpoint', req.path);
+    res.status(500).end('# Error generating metrics\n');
+  }
+});
+
+// Metrics middleware (must be first)
+app.use(metricsMiddleware);
 
 // Request logging middleware
 app.use(logRequest);
@@ -154,6 +209,17 @@ app.post('/submit', validateDateRange, catchAsync(async (req, res) => {
   const { dryRun } = req.body;
   const { startISO, endISO } = req.validatedDates;
 
+  // Log audit event
+  if (dbInitialized) {
+    await auditLogs.log('hours_submitted', {
+      startDate: startISO,
+      endDate: endISO,
+      dryRun: dryRun === 'on',
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+  }
+
   const results = await submitHoursRange({
     startDate: startISO,
     endDate: endISO,
@@ -191,6 +257,12 @@ app.post('/submit', validateDateRange, catchAsync(async (req, res) => {
 // Export app for testing
 export default app;
 
+// Initialize database (if configured)
+let dbInitialized = false;
+if (process.env.DB_PASSWORD) {
+  dbInitialized = await initDatabase();
+}
+
 // Start server only if not in test environment
 if (process.env.NODE_ENV !== 'test') {
   const port = process.env.PORT || 3000;
@@ -201,10 +273,20 @@ if (process.env.NODE_ENV !== 'test') {
     const cert = fs.readFileSync(process.env.SSL_CERT_PATH || 'cert.pem');
     https.createServer({ key, cert }, app).listen(port, () => {
       console.log(`Servidor HTTPS iniciado en https://localhost:${port}`);
+      if (dbInitialized) {
+        console.log('Base de datos inicializada correctamente');
+      }
     });
   } else {
     app.listen(port, () => {
       console.log(`Servidor iniciado en http://localhost:${port}`);
+      if (dbInitialized) {
+        console.log('Base de datos inicializada correctamente');
+      }
     });
   }
+
+  // Schedule automated backups (every 24 hours by default)
+  const backupInterval = parseInt(process.env.BACKUP_INTERVAL_HOURS) || 24;
+  scheduleBackups(backupInterval);
 }

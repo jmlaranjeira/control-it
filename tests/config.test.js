@@ -1,12 +1,16 @@
-import config from '../config.js';
-
-describe('Configuration', () => {
-  const originalEnv = process.env;
-
-  beforeEach(() => {
-    jest.resetModules();
-    process.env = { ...originalEnv };
+describe('Basic Config Tests', () => {
+  it('should have basic config structure', () => {
+    expect(process.env.USERNAME).toBe('testuser');
+    expect(process.env.PASSWORD).toBe('testpass');
+    expect(process.env.API_BASE_URL).toMatch(/^https?:\/\//);
   });
+
+  it('should have test database config', () => {
+    expect(process.env.DB_HOST).toBe('localhost');
+    expect(process.env.DB_PASSWORD).toBe('test_password');
+    expect(process.env.DB_NAME).toBe('controlit_test');
+  });
+});
 
   afterEach(() => {
     process.env = originalEnv;

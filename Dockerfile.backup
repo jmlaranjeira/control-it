@@ -1,0 +1,36 @@
+FROM alpine:latest
+
+# Install required packages
+RUN apk add --no-cache \
+    bash \
+    tar \
+    gzip \
+    curl \
+    postgresql-client \
+    redis
+
+# Create app user
+RUN addgroup -g 1001 -S appuser && \
+    adduser -S appuser -u 1001 -G appuser
+
+WORKDIR /app
+
+# Copy backup scripts
+COPY scripts/backup.sh /app/backup.sh
+COPY scripts/setup-backup-cron.sh /app/setup-backup-cron.sh
+
+# Make scripts executable
+RUN chmod +x /app/backup.sh /app/setup-backup-cron.sh
+
+# Create necessary directories
+RUN mkdir -p /app/backups /app/logs && \
+    chown -R appuser:appuser /app
+
+USER appuser
+
+# Health check
+HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
+    CMD echo "Backup service is running"
+
+# Default command runs backup script
+CMD ["/app/backup.sh"]
