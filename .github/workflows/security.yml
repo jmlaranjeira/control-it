@@ -42,7 +42,7 @@ jobs:
         severity: 'HIGH,CRITICAL'
 
     - name: Upload Trivy results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
         sarif_file: 'trivy-fs-results.sarif'
@@ -68,7 +68,7 @@ jobs:
       run: echo "OWASP Dependency Check temporarily disabled - requires NVD API key configuration"
 
     - name: Upload dependency check results
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v3
       with:
         sarif_file: reports/dependency-check-report.sarif
       continue-on-error: true

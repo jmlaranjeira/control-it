@@ -41,7 +41,7 @@ jobs:
       run: echo "Dockle security check temporarily disabled - will be re-enabled after version resolution"
 
     - name: Upload Dockle results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
         sarif_file: 'dockle-results.sarif'
