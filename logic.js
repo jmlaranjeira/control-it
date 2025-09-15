@@ -64,13 +64,13 @@ export async function submitHoursRange({ startDate, endDate, dryRun = true }) {
   const days = [];
   let cursor = start;
 
-  const vacationDays = await getVacationDays();
+  const timeOffMap = await getTimeOffDaysDetailed();
 
   while (cursor <= end) {
     const isoDate = cursor.toISODate();
-    const isHoliday = vacationDays.includes(isoDate);
+    const isTimeOff = Boolean(timeOffMap[isoDate]);
 
-    if (cursor.weekday >= 1 && cursor.weekday <= 5 && !isHoliday) {
+    if (cursor.weekday >= 1 && cursor.weekday <= 5 && !isTimeOff) {
       console.log('Día laborable válido:', isoDate, 'weekday:', cursor.weekday);
       days.push(cursor);
     } else {
@@ -123,7 +123,7 @@ export async function submitHoursRange({ startDate, endDate, dryRun = true }) {
       date: day.toISODate(),
       status: dryRun ? 'dry-run' : 'submitted',
       dryRun: dryRun,
-      isHoliday: vacationDays.includes(day.toISODate())
+      isHoliday: (timeOffMap[day.toISODate()] === 'holiday')
     });
   }
 
@@ -135,8 +135,8 @@ function randomJitter() {
 }
 
 export async function getRegisteredDays(startDate, endDate) {
-  const [vacationDays, registeredFromReport] = await Promise.all([
-    getVacationDays(),
+  const [timeOffMap, registeredFromReport] = await Promise.all([
+    getTimeOffDaysDetailed(),
     getRegisteredDaysFromReport(startDate, endDate)
   ]);
   const start = DateTime.fromISO(startDate);
@@ -146,11 +146,14 @@ export async function getRegisteredDays(startDate, endDate) {
 
   while (cursor <= end) {
     const isoDate = cursor.toISODate();
-    const isHoliday = vacationDays.includes(isoDate);
+    const timeOffType = timeOffMap[isoDate];
+    const isHoliday = timeOffType === 'holiday';
+    const isVacation = timeOffType === 'vacation';
+    const isLeave = timeOffType === 'leave';
     const isRegistered = registeredFromReport.includes(isoDate);
     calendarData.push({
       date: isoDate,
-      status: isHoliday ? 'holiday' : (isRegistered ? 'registered' : 'pending'),
+      status: isHoliday ? 'holiday' : (isVacation ? 'vacation' : (isLeave ? 'leave' : (isRegistered ? 'registered' : 'pending'))),
       isHoliday: isHoliday
     });
 
@@ -185,13 +188,13 @@ export async function getDetailedEventsByRange(startDate, endDate) {
   return results;
 }
 
-export async function getVacationDays() {
-  const cacheKey = cacheKeys.vacationDays();
+export async function getTimeOffDaysDetailed() {
+  const cacheKey = cacheKeys.vacationDaysDetailed ? cacheKeys.vacationDaysDetailed() : 'vacation_days_detailed';
 
   // Try to get from cache first
   const cachedData = get(cacheKey);
   if (cachedData) {
-    logInfo('Serving vacation days from cache');
+    logInfo('Serving detailed time-off days from cache');
     return cachedData;
   }
 
@@ -205,25 +208,50 @@ export async function getVacationDays() {
 
   if (!response.ok) {
     logWarn('Failed to fetch vacation days from API', { status: response.status });
-    return [];
+    return {};
   }
 
   const data = await response.json();
 
-  if (!Array.isArray(data.VacationsAnOnDutyCalendarDays)) {
+  // Support multiple possible shapes for the vacations list
+  const list =
+    data?.VacationsAnOnDutyCalendarDays || // original (typo?)
+    data?.VacationsAndOnDutyCalendarDays || // corrected spelling
+    data?.vacations ||
+    data?.Days ||
+    [];
+
+  if (!Array.isArray(list)) {
     logWarn('Invalid vacation days response format');
-    return [];
+    return {};
   }
 
-  const vacationDays = data.VacationsAnOnDutyCalendarDays
-    .filter(day => day.IsHoliday || day.IsLeaveDay)
-    .map(day => DateTime.fromISO(day.Day).toISODate());
+  const map = {};
+  for (const day of list) {
+    const raw = day?.Day || day?.Date || day?.date || '';
+    const iso = String(raw).split('T')[0] && /\d{4}-\d{2}-\d{2}/.test(String(raw).split('T')[0])
+      ? String(raw).split('T')[0]
+      : DateTime.fromISO(String(raw)).toISODate();
+    if (!iso) continue;
 
-  // Cache for 1 hour (3600 seconds) since vacation days don't change frequently
-  set(cacheKey, vacationDays, 3600);
-  logInfo('Cached vacation days', { count: vacationDays.length });
+    if (day?.IsHoliday === true) {
+      map[iso] = 'holiday';
+    } else if (day?.IsLeaveDay === true) {
+      map[iso] = 'leave';
+    } else if (day?.IsWorkedDay === true) {
+      map[iso] = 'vacation';
+    }
+  }
 
-  return vacationDays;
+  set(cacheKey, map, 3600);
+  logInfo('Cached detailed time-off days', { count: Object.keys(map).length });
+  return map;
+}
+
+export async function getVacationDays() {
+  // Backward compatibility: return array of all time-off days
+  const detailed = await getTimeOffDaysDetailed();
+  return Object.keys(detailed);
 }
 
 export async function getRegisteredDaysFromReport(startDate, endDate) {

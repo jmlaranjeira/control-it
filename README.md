@@ -1,135 +1,121 @@
 # ControlIT Hours Tracker Panel
 
-A lightweight, custom-built frontend to simplify and automate daily work hour registration in ControlIT. Designed to improve usability, reduce manual input, and allow efficient bulk operations.
+A lightweight panel to visualize and bulk‑register hours in ControlIT with a calendar UI, dry‑run simulation, and smart exclusion of time‑off days.
 
 ## Features
 
-### Core Functionality
-
-- Date Range Selection: Choose a start and end date for batch hour registration.
-- Simulation Mode: Dry-run mode to preview changes without submitting them.
-- Calendar View: Visual display of weekdays from January 1st to today.
-- Calendar Color Legend:
-  - Green: Registered workday
-  - Red: Unregistered workday
-  - Yellow: Simulated registration (dry-run)
-  - Orange (muted): Holiday or leave day
-
-### Data Sources
-
-- Registered Days: Extracted using a POST request to ControlIT’s internal report endpoint (`/reports/get-detailed-report`) and parsed with Cheerio.
-- Holidays & Leave: Pulled from `get-vacations-and-onduty-ranges-from-employee` API.
-
-### Intelligent Behavior
-
-- Automatically excludes weekends (Saturday and Sunday).
-- Skips holidays and leave days from submission.
-- Highlights holidays differently in the calendar.
-
-### UI Enhancements
-
-- Displays a loading message while fetching calendar data.
-- Inputs persist after form submission.
-- Clean visual style with centered layout and smooth feedback.
+- Calendar view with legend and filters: registered, pending, holiday, vacation, leave, simulated.
+- Dry‑run mode by default: simulates entries without sending to ControlIT.
+- Bulk submission across date ranges with PRG (Post/Redirect/Get) to prevent resubmission on refresh.
+- Time‑off detection from ControlIT API: classifies days as holiday, vacation, or leave.
+- Cheerio‑based scraping of “registered days” report to color the calendar.
+- Metrics endpoint for Prometheus and health checks.
+- In‑memory caching with optional dev disable and admin endpoints.
 
 ## Tech Stack
 
-- Node.js + Express
-- EJS for templating
-- Cheerio for HTML parsing
-- node-fetch for external requests
-- Luxon for date handling
-- Nodemon for development
+- Node.js (ESM) + Express + EJS
+- node-fetch, Cheerio (pinned `1.0.0` for Node 18)
+- Luxon for dates, winston for logs, prom‑client for metrics
 
 ## Setup
 
 ```bash
 npm install
-npm run dev
+npm run start   # production‑like (respects .env)
+# or
+npm run dev     # with nodemon
 ```
 
-### Testing
+Default port is `3000`. You can set `PORT` in `.env` (example uses `3009`).
 
-Run the test suite:
-```bash
-npm test
-```
+## Configuration
 
-Run tests with coverage:
-```bash
-npm run test:coverage
-```
+Create your `.env` from the example and edit values:
 
-Run tests in watch mode:
-```bash
-npm run test:watch
-```
-
-### Configuration
-
-Create a `.env` file in the root directory with your ControlIT credentials:
 ```bash
 cp .env.example .env
 ```
 
-Then edit `.env` with your actual credentials:
-```env
-CONTROLIT_USERNAME=your_username_here
-CONTROLIT_PASSWORD=your_password_here
-```
+Key variables:
 
-This step is required to enable authenticated requests. The `.env` file is ignored by git for security.
+- CONTROLIT_USERNAME / CONTROLIT_PASSWORD
+- CONTROLIT_API_BASE_URL (default: https://api.controlit.es/api)
+- CONTROLIT_REPORTS_BASE_URL (default: https://controlit.es/reports)
+- PORT, USE_HTTPS, SSL_KEY_PATH, SSL_CERT_PATH
+- CACHE_DISABLED=true to bypass cache during development
+- Work schedule and summer dates (see `.env.example`)
 
-### HTTPS Configuration (Optional)
+The server loads `.env` automatically via `dotenv`.
 
-To enable HTTPS for secure communication:
+## How It Works
 
-1. Set `USE_HTTPS=true` in your `.env` file
-2. Generate SSL certificates (for development, you can create self-signed certificates):
-   ```bash
-   openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes
-   ```
-3. Update `SSL_KEY_PATH` and `SSL_CERT_PATH` in `.env` if certificates are in different locations
+- Registered days: POST to `/reports/get-detailed-report` and parse HTML with Cheerio to find days with entries.
+- Time‑off days: GET `/vacations/get-vacations-and-onduty-ranges-from-employee` and classify each date:
+  - `IsHoliday === true` → holiday
+  - `IsWorkedDay === true` → vacation (vacaciones propias)
+  - `IsLeaveDay === true` → leave (permisos)
+- Calendar coloring rules (priority): holiday > vacation > leave > registered > pending.
+- Dry‑run submission computes the same work blocks but does not call ControlIT APIs; UI marks those days as “simulated”.
+- PRG pattern: POST `/submit` redirects (303) to `/` with query params so refresh doesn’t resend.
 
-**Note**: For production, use certificates from a trusted Certificate Authority.
+## Legend and Filters
 
-## 🐳 Docker Deployment
+The legend at the top of the calendar shows a color key and acts as a filter. Click to toggle categories:
 
-### Production Stack
+- Registered: green
+- Pending: red
+- Holiday: yellow
+- Vacation: blue
+- Leave: purple
+- Simulated: yellow with ⚡
+
+Keyboard support: focus an item and press Enter/Space to toggle.
+
+## Caching
+
+- NodeCache with TTLs:
+  - Time‑off map: 1h
+  - Registered days report: 30min
+- Disable in dev: set `CACHE_DISABLED=true`.
+- Admin endpoints:
+  - GET `/cache/keys` — list keys
+  - GET `/cache/stats` — cache stats
+  - POST `/cache/flush` — clear all
+  - DELETE `/cache?key=...` — delete key
+
+Submitting hours invalidates the relevant registered‑days cache keys to reflect changes immediately.
+
+## Endpoints
+
+- GET `/` — Calendar UI (reads query for PRG: `submitted`, `start`, `end`, `dry`)
+- POST `/submit` — Submit or simulate hours; redirects back to `/`
+- GET `/metrics` — Prometheus metrics
+- GET `/health`, `/health/live`, `/health/ready` — health checks
+- GET `/health/cache`, `/health/dependencies`, `/health/backups`, `/health/database`
+- GET `/favicon.ico` — served to avoid 404s
+
+## Testing
+
 ```bash
-# Build production image
-npm run docker:build
-
-# Run production stack
-npm run docker:prod
-
-# Deploy to staging
-npm run deploy:staging
-
-# Deploy to production
-npm run deploy:production
+npm test
+npm run test:coverage
+npm run test:watch
 ```
 
-### Production Architecture
-The production setup includes:
-- **Node.js Application**: Optimized container with health checks
-- **PostgreSQL**: Database for data persistence
-- **Redis**: Caching and session storage
-- **Nginx**: Reverse proxy with SSL termination
-- **Prometheus**: Metrics collection
-- **Grafana**: Dashboard visualization
-- **Backup Service**: Automated backup management
+## HTTPS (optional)
 
-### Environment-Specific Deployments
+1) Set `USE_HTTPS=true` in `.env`
+2) Generate certs (dev):
+
 ```bash
-# Staging deployment
-./scripts/deploy.sh staging controlit-app:latest
-
-# Production deployment
-./scripts/deploy.sh production controlit-app:v1.2.3
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes
 ```
 
-### Notes
+3) Point `SSL_KEY_PATH` and `SSL_CERT_PATH` if needed.
 
-- The app will be accessible at `http://localhost:3000`.
-- If you use `nodemon`, changes to local files will automatically restart the server (thanks to volume mapping in `docker-compose.yml`).
+## Notes
+
+- Node 18 users: Cheerio is pinned to `1.0.0` to avoid Undici API issues; Node 20+ can upgrade.
+- Database features initialize only if `DB_PASSWORD` is set; not required for core usage.
+- Use `CACHE_DISABLED=true` if no changes appear due to caching while iterating in development.

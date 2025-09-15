@@ -156,6 +156,7 @@ export const cacheKeys = {
 
   // Generate cache key for vacation days
   vacationDays: () => 'vacation_days',
+  vacationDaysDetailed: () => 'vacation_days_detailed',
 
   // Generate cache key for API responses
   apiResponse: (method, url, params = {}) => {

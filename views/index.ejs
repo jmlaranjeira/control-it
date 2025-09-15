@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ControlIT - Registro de Horas</title>
+  <link rel="icon" href="/favicon.ico" sizes="any">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <style>
@@ -138,7 +139,7 @@
       box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
     }
 
-    .form-group input[type="date"]:invalid {
+    form.validated .form-group input[type="date"]:invalid {
       border-color: var(--error-color);
     }
 
@@ -322,6 +323,8 @@
     .legend-color.registered { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: #16a34a; }
     .legend-color.pending { background: linear-gradient(135deg, #fef2f2, #fecaca); border-color: #dc2626; }
     .legend-color.holiday { background: linear-gradient(135deg, #fffbeb, #fde68a); border-color: #d97706; }
+    .legend-color.vacation { background: linear-gradient(135deg, #e0f2fe, #bae6fd); border-color: #0284c7; }
+    .legend-color.leave { background: linear-gradient(135deg, #f5f3ff, #ddd6fe); border-color: #7c3aed; }
     .legend-color.simulated { background: linear-gradient(135deg, #fefce8, #fde047); border-color: #ca8a04; }
 
     /* Legend toggle state */
@@ -385,6 +388,18 @@
       background: linear-gradient(135deg, #fffbeb, #fde68a);
       border-color: #d97706;
       color: #92400e;
+    }
+
+    .calendar-day.vacation {
+      background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+      border-color: #0284c7;
+      color: #075985;
+    }
+
+    .calendar-day.leave {
+      background: linear-gradient(135deg, #f5f3ff, #ddd6fe);
+      border-color: #7c3aed;
+      color: #5b21b6;
     }
 
     .calendar-day.simulated {
@@ -579,6 +594,15 @@
 
     <!-- Alert Messages -->
     <div id="alert-container"></div>
+    <% if (typeof submitted !== 'undefined' && submitted) { %>
+      <div class="alert alert-success" role="status" aria-live="polite">
+        <i class="fas fa-check-circle"></i>
+        <div>
+          <strong>Proceso completado:</strong> Se ha procesado el rango
+          <%= startDate %> a <%= endDate %><%= dryRun ? ' (simulado)' : '' %>.
+        </div>
+      </div>
+    <% } %>
 
     <!-- Main Form Card -->
     <div class="card">
@@ -625,7 +649,7 @@
             type="checkbox"
             id="dryRun"
             name="dryRun"
-            checked
+            <%= dryRun ? 'checked' : '' %>
             aria-describedby="dryRun-help"
           >
           <label for="dryRun">
@@ -703,6 +727,14 @@
             <div class="legend-color holiday" aria-hidden="true"></div>
             <span>Festivo</span>
           </div>
+          <div class="legend-item" role="button" tabindex="0" data-status="vacation" aria-pressed="true">
+            <div class="legend-color vacation" aria-hidden="true"></div>
+            <span>Vacaciones</span>
+          </div>
+          <div class="legend-item" role="button" tabindex="0" data-status="leave" aria-pressed="true">
+            <div class="legend-color leave" aria-hidden="true"></div>
+            <span>Permiso</span>
+          </div>
           <div class="legend-item" role="button" tabindex="0" data-status="simulated" aria-pressed="true">
             <div class="legend-color simulated" aria-hidden="true"></div>
             <span>Simulado ⚡</span>
@@ -747,13 +779,24 @@
                  if (isDryRun) classes.push('simulated');
                  if (isToday) classes.push('today');
                  if (isWeekend && !day.isHoliday) classes.push('weekend');
+
+                 const statusText =
+                   day.status === 'holiday' ? 'Día festivo' :
+                   day.status === 'vacation' ? 'Vacaciones' :
+                   day.status === 'leave' ? 'Permiso' :
+                   day.status === 'registered' ? 'Horas registradas' :
+                   day.status === 'pending' ? 'Horas pendientes' :
+                   'Sin registro';
+                 const ariaLabel = `${dayNumber} de ${monthLabel}: ${statusText}${isDryRun ? ' (Simulado)' : ''}`;
             %>
               <div
                 class="<%= classes.join(' ') %>"
                 role="gridcell"
                 tabindex="0"
-                aria-label="<%= dayNumber %> de <%= monthLabel %>: <%= day.status === 'registered' ? 'Horas registradas' : day.status === 'pending' ? 'Horas pendientes' : day.isHoliday ? 'Día festivo' : 'Sin registro' %>"
+                aria-label="<%= ariaLabel %>"
+                title="<%= ariaLabel %>"
                 data-date="<%= day.date %>"
+                data-status="<%= day.status || '' %>"
               >
                 <%= dayNumber %>
               </div>
@@ -868,7 +911,10 @@
 
       // Legend filters: toggle visibility by status
       const legendItems = Array.from(document.querySelectorAll('.legend .legend-item'));
-      const activeStatuses = new Set(['registered','pending','holiday','simulated']);
+      // Load filters from localStorage if present
+      const stored = (() => { try { return JSON.parse(localStorage.getItem('calendarFilters') || '[]'); } catch { return []; } })();
+      const defaultStatuses = ['registered','pending','holiday','vacation','leave','simulated'];
+      const activeStatuses = new Set(Array.isArray(stored) && stored.length ? stored : defaultStatuses);
 
       function applyCalendarFilters() {
         const days = document.querySelectorAll('.calendar-day');
@@ -891,8 +937,15 @@
 
         item.setAttribute('aria-pressed', String(next));
         if (next) activeStatuses.add(status); else activeStatuses.delete(status);
+        try { localStorage.setItem('calendarFilters', JSON.stringify(Array.from(activeStatuses))); } catch {}
         applyCalendarFilters();
       }
+
+      // Initialize legend pressed state from activeStatuses
+      legendItems.forEach(item => {
+        const status = item.getAttribute('data-status');
+        item.setAttribute('aria-pressed', String(activeStatuses.has(status)));
+      });
 
       legendItems.forEach(item => {
         item.addEventListener('click', () => toggleLegendItem(item));
@@ -906,6 +959,13 @@
 
       // Initial filter application (no-op but keeps behavior explicit)
       applyCalendarFilters();
+
+      // Form validation UX: only mark invalid after an attempt
+      form.addEventListener('submit', function(e) {
+        if (!validateForm()) {
+          form.classList.add('validated');
+        }
+      }, { capture: true });
 
       // Keyboard navigation for calendar
       document.addEventListener('keydown', function(e) {

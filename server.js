@@ -11,7 +11,7 @@ import { errorHandler, notFound, catchAsync, validateDateRange } from './middlew
 import { logRequest } from './utils/logger.js';
 import { apiLimiter, submitLimiter } from './middleware/rateLimiter.js';
 import { getStats } from './utils/cache.js';
-import { del as cacheDel, cacheKeys, flushAll as cacheFlushAll, getKeys as cacheGetKeys } from './utils/cache.js';
+import { get as cacheGet, set as cacheSet, del as cacheDel, cacheKeys, flushAll as cacheFlushAll, getKeys as cacheGetKeys } from './utils/cache.js';
 import { performDependencyHealthCheck } from './utils/dependencyManager.js';
 import { metricsMiddleware, getMetrics, recordError, recordApiCall, register } from './utils/metrics.js';
 import { scheduleBackups, getBackupStats } from './utils/backup.js';
@@ -32,6 +32,16 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.urlencoded({ extended: true }));
+
+// Favicon handler to avoid 404s
+app.get('/favicon.ico', (req, res) => {
+  // 1x1 transparent PNG
+  const pngBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
+  const buf = Buffer.from(pngBase64, 'base64');
+  res.setHeader('Content-Type', 'image/png');
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  res.send(buf);
+});
 
 // Health check endpoints
 app.get('/health', (req, res) => {
@@ -200,7 +210,49 @@ app.get('/', catchAsync(async (req, res) => {
     cursor.setDate(cursor.getDate() + 1);
   }
 
-  res.render('index', { results: [], calendarData, startDate: '', endDate: '', isLoading: true });
+  const { submitted, start: qsStart, end: qsEnd, dry, job } = req.query || {};
+  const startPrefill = typeof qsStart === 'string' ? qsStart : '';
+  const endPrefill = typeof qsEnd === 'string' ? qsEnd : '';
+  const showSubmitted = submitted === '1';
+  // Default to simulation mode enabled when not specified
+  const dryRun = (typeof dry === 'undefined') ? true : (dry === '1');
+
+  // Load results from job cache if available; otherwise synthesize for dry-run
+  let synthesizedResults = [];
+  if (showSubmitted && job) {
+    const cached = cacheGet(`job_results_${job}`);
+    if (Array.isArray(cached)) {
+      synthesizedResults = cached;
+    }
+  }
+  if (showSubmitted && dryRun && startPrefill && endPrefill && synthesizedResults.length === 0) {
+    try {
+      const rangeStart = new Date(startPrefill);
+      const rangeEnd = new Date(endPrefill);
+      let cursorSim = new Date(rangeStart);
+      while (cursorSim <= rangeEnd) {
+        const iso = cursorSim.toISOString().slice(0, 10);
+        const dow = cursorSim.getDay();
+        const find = calendarData.find(d => d.date === iso);
+        const isHoliday = !!find?.isHoliday;
+        if (dow >= 1 && dow <= 5 && !isHoliday) {
+          synthesizedResults.push({ date: iso, dryRun: true, status: 'dry-run', isHoliday });
+        }
+        cursorSim.setHours(12);
+        cursorSim.setDate(cursorSim.getDate() + 1);
+      }
+    } catch {}
+  }
+
+  res.render('index', {
+    results: synthesizedResults,
+    calendarData,
+    startDate: startPrefill,
+    endDate: endPrefill,
+    isLoading: false,
+    submitted: showSubmitted,
+    dryRun,
+  });
 }));
 
 app.post('/submit', validateDateRange, catchAsync(async (req, res) => {
@@ -255,7 +307,12 @@ app.post('/submit', validateDateRange, catchAsync(async (req, res) => {
     cursor.setDate(cursor.getDate() + 1);
   }
 
-  res.render('index', { calendarData, results, startDate: startISO, endDate: endISO, isLoading: false });
+  // Store results temporarily to show after redirect (works for both dry-run and real submissions)
+  const jobId = `${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+  try { cacheSet(`job_results_${jobId}`, results, 600); } catch {}
+
+  // Use PRG to avoid resubmission on refresh
+  return res.redirect(303, `/?submitted=1&start=${encodeURIComponent(startISO)}&end=${encodeURIComponent(endISO)}&dry=${dryRun === 'on' ? '1' : '0'}&job=${encodeURIComponent(jobId)}`);
 }));
 
 // Simple cache admin endpoints (optional)
