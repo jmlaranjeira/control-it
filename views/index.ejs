@@ -307,6 +307,8 @@
       font-size: 0.9rem;
       font-weight: 500;
       color: var(--gray-700);
+      cursor: pointer;
+      user-select: none;
     }
 
     .legend-color {
@@ -315,6 +317,16 @@
       border-radius: 4px;
       border: 2px solid var(--gray-300);
     }
+
+    /* Legend color swatches to match calendar-day styles */
+    .legend-color.registered { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: #16a34a; }
+    .legend-color.pending { background: linear-gradient(135deg, #fef2f2, #fecaca); border-color: #dc2626; }
+    .legend-color.holiday { background: linear-gradient(135deg, #fffbeb, #fde68a); border-color: #d97706; }
+    .legend-color.simulated { background: linear-gradient(135deg, #fefce8, #fde047); border-color: #ca8a04; }
+
+    /* Legend toggle state */
+    .legend-item[aria-pressed="false"] { opacity: 0.5; }
+    .legend-item[aria-pressed="true"] { opacity: 1; }
 
     .month-section {
       margin-bottom: 2rem;
@@ -678,21 +690,21 @@
 
       <div class="calendar-header">
         <div class="calendar-title">Vista Mensual</div>
-        <div class="legend">
-          <div class="legend-item">
-            <div class="legend-color registered"></div>
+        <div class="legend" aria-label="Leyenda y filtros de calendario">
+          <div class="legend-item" role="button" tabindex="0" data-status="registered" aria-pressed="true">
+            <div class="legend-color registered" aria-hidden="true"></div>
             <span>Registrado</span>
           </div>
-          <div class="legend-item">
-            <div class="legend-color pending"></div>
+          <div class="legend-item" role="button" tabindex="0" data-status="pending" aria-pressed="true">
+            <div class="legend-color pending" aria-hidden="true"></div>
             <span>Pendiente</span>
           </div>
-          <div class="legend-item">
-            <div class="legend-color holiday"></div>
+          <div class="legend-item" role="button" tabindex="0" data-status="holiday" aria-pressed="true">
+            <div class="legend-color holiday" aria-hidden="true"></div>
             <span>Festivo</span>
           </div>
-          <div class="legend-item">
-            <div class="legend-color simulated"></div>
+          <div class="legend-item" role="button" tabindex="0" data-status="simulated" aria-pressed="true">
+            <div class="legend-color simulated" aria-hidden="true"></div>
             <span>Simulado ⚡</span>
           </div>
         </div>
@@ -853,6 +865,47 @@
 
       startDateInput.addEventListener('change', validateDateRange);
       endDateInput.addEventListener('change', validateDateRange);
+
+      // Legend filters: toggle visibility by status
+      const legendItems = Array.from(document.querySelectorAll('.legend .legend-item'));
+      const activeStatuses = new Set(['registered','pending','holiday','simulated']);
+
+      function applyCalendarFilters() {
+        const days = document.querySelectorAll('.calendar-day');
+        days.forEach(day => {
+          // Show if day has any active status
+          const visible = Array.from(activeStatuses).some(s => day.classList.contains(s));
+          day.style.display = visible ? '' : 'none';
+        });
+      }
+
+      function toggleLegendItem(item) {
+        const status = item.getAttribute('data-status');
+        const pressed = item.getAttribute('aria-pressed') === 'true';
+        const next = !pressed;
+
+        // Ensure at least one status remains active
+        if (!next && activeStatuses.size === 1 && activeStatuses.has(status)) {
+          return; // do nothing if it would disable the last active filter
+        }
+
+        item.setAttribute('aria-pressed', String(next));
+        if (next) activeStatuses.add(status); else activeStatuses.delete(status);
+        applyCalendarFilters();
+      }
+
+      legendItems.forEach(item => {
+        item.addEventListener('click', () => toggleLegendItem(item));
+        item.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggleLegendItem(item);
+          }
+        });
+      });
+
+      // Initial filter application (no-op but keeps behavior explicit)
+      applyCalendarFilters();
 
       // Keyboard navigation for calendar
       document.addEventListener('keydown', function(e) {

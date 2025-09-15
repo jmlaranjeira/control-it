@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -10,8 +11,9 @@ import { errorHandler, notFound, catchAsync, validateDateRange } from './middlew
 import { logRequest } from './utils/logger.js';
 import { apiLimiter, submitLimiter } from './middleware/rateLimiter.js';
 import { getStats } from './utils/cache.js';
+import { del as cacheDel, cacheKeys, flushAll as cacheFlushAll, getKeys as cacheGetKeys } from './utils/cache.js';
 import { performDependencyHealthCheck } from './utils/dependencyManager.js';
-import { metricsMiddleware, getMetrics, recordError, recordApiCall } from './utils/metrics.js';
+import { metricsMiddleware, getMetrics, recordError, recordApiCall, register } from './utils/metrics.js';
 import { scheduleBackups, getBackupStats } from './utils/backup.js';
 import { initDatabase, healthCheck as dbHealthCheck, auditLogs } from './utils/database.js';
 
@@ -22,7 +24,6 @@ async function checkIfHoliday(date) {
 }
 
 const app = express();
-const port = 3000;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -154,7 +155,7 @@ app.get('/health/database', async (req, res) => {
 // Prometheus metrics endpoint
 app.get('/metrics', async (req, res) => {
   try {
-    res.set('Content-Type', promClient.register.contentType);
+    res.set('Content-Type', register.contentType);
     res.end(await getMetrics());
   } catch (error) {
     recordError('metrics_endpoint', req.path);
@@ -172,9 +173,6 @@ app.use(logRequest);
 app.use('/submit', submitLimiter);
 app.use(apiLimiter);
 
-// Error handling middleware
-app.use(notFound);
-app.use(errorHandler);
 
 app.get('/', catchAsync(async (req, res) => {
   const today = new Date();
@@ -230,6 +228,12 @@ app.post('/submit', validateDateRange, catchAsync(async (req, res) => {
   const yearStart = new Date(today.getFullYear(), 0, 1);
   const calendarStartISO = yearStart.toISOString().slice(0, 10);
   const calendarEndISO = today.toISOString().slice(0, 10);
+
+  // Invalidate cached registered days so the UI reflects fresh data
+  try {
+    cacheDel(cacheKeys.registeredDays(startISO, endISO));
+    cacheDel(cacheKeys.registeredDays(calendarStartISO, calendarEndISO));
+  } catch {}
   const registered = await getRegisteredDays(calendarStartISO, calendarEndISO);
 
   const calendarData = [];
@@ -253,6 +257,31 @@ app.post('/submit', validateDateRange, catchAsync(async (req, res) => {
 
   res.render('index', { calendarData, results, startDate: startISO, endDate: endISO, isLoading: false });
 }));
+
+// Simple cache admin endpoints (optional)
+app.get('/cache/keys', (req, res) => {
+  res.json({ keys: cacheGetKeys() });
+});
+
+app.get('/cache/stats', (req, res) => {
+  res.json({ stats: getStats() });
+});
+
+app.post('/cache/flush', (req, res) => {
+  cacheFlushAll();
+  res.json({ ok: true });
+});
+
+app.delete('/cache', (req, res) => {
+  const { key } = req.query;
+  if (!key) return res.status(400).json({ error: 'key is required' });
+  const ok = cacheDel(String(key));
+  res.json({ ok });
+});
+
+// Error handling middleware (must be after routes)
+app.use(notFound);
+app.use(errorHandler);
 
 // Export app for testing
 export default app;

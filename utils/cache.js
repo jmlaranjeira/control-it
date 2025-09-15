@@ -2,6 +2,9 @@ import NodeCache from 'node-cache';
 import { recordCacheHit, recordCacheMiss } from './metrics.js';
 import { logInfo, logWarn } from './logger.js';
 
+// Optional global cache disable (useful in development)
+const cacheDisabled = process.env.CACHE_DISABLED === 'true';
+
 // Create cache instance with default TTL of 10 minutes
 const cache = new NodeCache({
   stdTTL: 600, // 10 minutes default
@@ -41,6 +44,7 @@ cache.on('flush', () => {
  * Get value from cache
  */
 export const get = (key) => {
+  if (cacheDisabled) return null;
   const value = cache.get(key);
   if (value !== undefined) {
     cacheStats.hits++;
@@ -56,6 +60,7 @@ export const get = (key) => {
  * Set value in cache with optional TTL
  */
 export const set = (key, value, ttl = null) => {
+  if (cacheDisabled) return false;
   const success = cache.set(key, value, ttl);
   if (success) {
     logInfo(`Cache SET: ${key}`, { ttl: ttl || 'default' });
@@ -69,6 +74,7 @@ export const set = (key, value, ttl = null) => {
  * Delete value from cache
  */
 export const del = (key) => {
+  if (cacheDisabled) return true;
   const deleted = cache.del(key);
   if (deleted > 0) {
     logInfo(`Cache DEL: ${key}`);

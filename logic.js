@@ -2,7 +2,9 @@ import { DateTime } from 'luxon';
 import fetch from 'node-fetch';
 import config from './config.js';
 import FormData from 'form-data';
-import cheerio from 'cheerio';
+import * as cheerio from 'cheerio';
+import { get, set, cacheKeys } from './utils/cache.js';
+import { logInfo, logWarn } from './utils/logger.js';
 
 const currentYear = DateTime.now().year;
 const summerStart = DateTime.fromObject({

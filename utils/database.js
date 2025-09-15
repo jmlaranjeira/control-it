@@ -41,7 +41,7 @@ export async function initDatabase() {
 
     return true;
   } catch (error) {
-    logError('Failed to initialize database:', error);
+    logError(error);
     return false;
   }
 }
@@ -141,7 +141,7 @@ async function createTables() {
 
     logInfo('Database tables and indexes created successfully');
   } catch (error) {
-    logError('Failed to create database tables:', error);
+    logError(error);
     throw error;
   } finally {
     client.release();

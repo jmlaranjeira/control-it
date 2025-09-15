@@ -85,3 +85,5 @@ tests/
 # Build artifacts
 dist/
 build/
+
+backups/
