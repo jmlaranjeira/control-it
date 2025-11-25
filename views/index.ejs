@@ -810,7 +810,7 @@
 
   <script>
     // Enhanced form handling with better UX
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', async function() {
       const form = document.getElementById('hours-form');
       const submitBtn = document.getElementById('submit-btn');
       const submitText = document.getElementById('submit-text');
@@ -909,6 +909,59 @@
       startDateInput.addEventListener('change', validateDateRange);
       endDateInput.addEventListener('change', validateDateRange);
 
+      const calendarContainer = document.querySelector('.calendar-container');
+
+      if (calendarContainer && form && startDateInput && endDateInput) {
+        calendarContainer.addEventListener('click', async function (event) {
+          const dayEl = event.target.closest('.calendar-day');
+          console.log('Calendar clicked', dayEl.dataset,);
+
+          if (!dayEl) return;
+
+          const status = dayEl.dataset.status || '';
+          if (status !== 'pending') {
+            return;
+          }
+
+          const date = dayEl.dataset.date;
+          if (!date) return;
+
+          startDateInput.value = date;
+          endDateInput.value = date;
+          
+        const body = new URLSearchParams();
+          body.set('startDate', date);
+          body.set('endDate', date);
+          const isDryRun = document.getElementById('dryRun').checked;
+          if (isDryRun.checked) {
+            body.set('dryRun', 'on');
+          }
+
+          try {
+              const response = await fetch('/submit-day', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+              },
+              body: body.toString(),
+            });
+
+            if (response.status == 200) {
+              if (!isDryRun) {
+                dayEl.classList.remove('pending');
+                dayEl.classList.add('registered');
+                dayEl.dataset.status = 'registered';
+              } else {
+                dayEl.classList.add('simulated');
+              }
+            }
+          } catch (error) {
+            console.log('Error submitting single day', error);
+            throw error;
+          }
+        });
+      }
+
       // Legend filters: toggle visibility by status
       const legendItems = Array.from(document.querySelectorAll('.legend .legend-item'));
       // Load filters from localStorage if present
@@ -994,7 +1047,6 @@
           }
         }
       });
-
       // Auto-hide loading on page load (for back navigation)
       window.addEventListener('load', function() {
         loadingOverlay.style.display = 'none';
