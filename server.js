@@ -258,13 +258,14 @@ app.get('/', catchAsync(async (req, res) => {
 app.post('/submit', validateDateRange, catchAsync(async (req, res) => {
   const { dryRun } = req.body;
   const { startISO, endISO } = req.validatedDates;
+  const isDryRunActive = dryRun === 'on';
 
   // Log audit event
   if (dbInitialized) {
     await auditLogs.log('hours_submitted', {
       startDate: startISO,
       endDate: endISO,
-      dryRun: dryRun === 'on',
+      dryRun: isDryRunActive,
       ipAddress: req.ip,
       userAgent: req.get('User-Agent')
     });
@@ -273,7 +274,7 @@ app.post('/submit', validateDateRange, catchAsync(async (req, res) => {
   const results = await submitHoursRange({
     startDate: startISO,
     endDate: endISO,
-    dryRun: dryRun === 'on',
+    dryRun: isDryRunActive,
   });
 
   const today = new Date();
@@ -315,6 +316,39 @@ app.post('/submit', validateDateRange, catchAsync(async (req, res) => {
   return res.redirect(303, `/?submitted=1&start=${encodeURIComponent(startISO)}&end=${encodeURIComponent(endISO)}&dry=${dryRun === 'on' ? '1' : '0'}&job=${encodeURIComponent(jobId)}`);
 }));
 
+app.post('/submit-day', validateDateRange, catchAsync(async (req, res) => {
+  const { dryRun } = req.body;
+  const { startISO, endISO } = req.validatedDates;
+
+  const isDryRun = dryRun === 'on';
+
+  const results = await submitHoursRange({
+    startDate: startISO,
+    endDate: endISO,
+    dryRun: isDryRun,
+  });
+
+
+  try {
+    const today = new Date();
+    const yearStart = new Date(today.getFullYear(), 0, 1);
+    const calendarStartISO = yearStart.toISOString().slice(0, 10);
+    const calendarEndISO = today.toISOString().slice(0, 10);
+
+    cacheDel(cacheKeys.registeredDays(startISO, endISO));
+    cacheDel(cacheKeys.registeredDays(calendarStartISO, calendarEndISO));
+  } catch {
+    // if cache fails, ignore it
+  }
+
+  return res.json({
+    success: true,
+    dryRun: isDryRun,
+    results,
+  });
+}));
+
+
 // Simple cache admin endpoints (optional)
 app.get('/cache/keys', (req, res) => {
   res.json({ keys: cacheGetKeys() });
@@ -349,6 +383,12 @@ if (process.env.DB_PASSWORD) {
   dbInitialized = await initDatabase();
 }
 
+// Schedule automated backups in production
+if (process.env.NODE_ENV === 'production') {
+  const backupInterval = parseInt(process.env.BACKUP_INTERVAL_HOURS) || 24;
+  scheduleBackups(backupInterval);
+}
+
 // Start server only if not in test environment
 if (process.env.NODE_ENV !== 'test') {
   const port = process.env.PORT || 3000;
@@ -358,21 +398,17 @@ if (process.env.NODE_ENV !== 'test') {
     const key = fs.readFileSync(process.env.SSL_KEY_PATH || 'key.pem');
     const cert = fs.readFileSync(process.env.SSL_CERT_PATH || 'cert.pem');
     https.createServer({ key, cert }, app).listen(port, () => {
-      console.log(`Servidor HTTPS iniciado en https://localhost:${port}`);
+      console.info(`Servidor HTTPS iniciado en https://localhost:${port}`);
       if (dbInitialized) {
-        console.log('Base de datos inicializada correctamente');
+        console.info('Base de datos inicializada correctamente');
       }
     });
   } else {
     app.listen(port, () => {
-      console.log(`Servidor iniciado en http://localhost:${port}`);
+      console.info(`Servidor iniciado en http://localhost:${port}`);
       if (dbInitialized) {
-        console.log('Base de datos inicializada correctamente');
+        console.info('Base de datos inicializada correctamente');
       }
     });
   }
-
-  // Schedule automated backups (every 24 hours by default)
-  const backupInterval = parseInt(process.env.BACKUP_INTERVAL_HOURS) || 24;
-  scheduleBackups(backupInterval);
 }
