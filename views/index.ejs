@@ -933,7 +933,7 @@
           body.set('startDate', date);
           body.set('endDate', date);
           const isDryRun = document.getElementById('dryRun').checked;
-          if (isDryRun.checked) {
+          if (isDryRun) {
             body.set('dryRun', 'on');
           }
 
