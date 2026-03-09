@@ -2,10 +2,34 @@ document.addEventListener('DOMContentLoaded', async function () {
   const form = document.getElementById('hours-form');
   const submitBtn = document.getElementById('submit-btn');
   const submitText = document.getElementById('submit-text');
+  const submitIcon = document.getElementById('submit-icon');
   const loadingOverlay = document.getElementById('loading-overlay');
   const alertContainer = document.getElementById('alert-container');
   const startDateInput = document.getElementById('startDate');
   const endDateInput = document.getElementById('endDate');
+  const dryRunCheckbox = document.getElementById('dryRun');
+
+  // --- Global simulation toggle ---
+
+  const simulationToggleBtn = document.getElementById('simulation-toggle-btn');
+  if (simulationToggleBtn && dryRunCheckbox) {
+    function syncToggleUI() {
+      const active = dryRunCheckbox.checked;
+      simulationToggleBtn.classList.toggle('toggle-switch--active', active);
+      simulationToggleBtn.setAttribute('aria-pressed', String(active));
+      if (submitText) submitText.textContent = active ? 'Simular' : 'Registrar';
+      if (submitIcon) {
+        submitIcon.className = active ? 'fas fa-eye' : 'fas fa-paper-plane';
+      }
+    }
+
+    simulationToggleBtn.addEventListener('click', function () {
+      dryRunCheckbox.checked = !dryRunCheckbox.checked;
+      syncToggleUI();
+    });
+
+    syncToggleUI();
+  }
 
   // --- Alert helpers ---
 

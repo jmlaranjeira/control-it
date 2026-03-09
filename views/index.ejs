@@ -11,9 +11,29 @@
 </head>
 <body>
   <div class="container">
+
+    <!-- Header with global simulation toggle -->
     <header class="header">
-      <h1><i class="fas fa-clock"></i> ControlIT - Registro de Horas</h1>
-      <p>Automatiza el registro de tus horas laborales de forma eficiente y segura</p>
+      <div class="header-top">
+        <div class="header-brand">
+          <h1><i class="fas fa-clock"></i> ControlIT - Registro de Horas</h1>
+          <p>Automatiza el registro de tus horas laborales de forma eficiente y segura</p>
+        </div>
+        <div class="simulation-toggle">
+          <span class="simulation-toggle__label">
+            <i class="fas fa-bolt"></i> Simulación
+          </span>
+          <button
+            type="button"
+            id="simulation-toggle-btn"
+            class="toggle-switch <%= dryRun ? 'toggle-switch--active' : '' %>"
+            aria-pressed="<%= dryRun %>"
+            aria-label="Modo simulación"
+          >
+            <span class="toggle-switch__thumb"></span>
+          </button>
+        </div>
+      </div>
     </header>
 
     <!-- Loading Overlay -->
@@ -37,58 +57,64 @@
       </div>
     <% } %>
 
-    <!-- Stats Panel -->
+    <!-- Stats Bar (compact) -->
     <% if (typeof stats !== 'undefined') { %>
-    <div class="card">
-      <div class="card-header">
-        <i class="fas fa-chart-pie"></i>
-        <h2>Resumen del Año</h2>
+    <div class="stats-bar">
+      <div class="stats-bar__item">
+        <span class="stats-bar__value stats-bar__value--success"><%= stats.registered %></span>
+        <span class="stats-bar__label">Registrados</span>
       </div>
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-value" style="color: var(--success-color);"><%= stats.registered %></div>
-          <div class="stat-label">Días Registrados</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" style="color: var(--error-color);"><%= stats.pending %></div>
-          <div class="stat-label">Días Pendientes</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" style="color: var(--warning-color);"><%= stats.holiday %></div>
-          <div class="stat-label">Días Festivos</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" style="color: var(--info-color);"><%= stats.vacation %></div>
-          <div class="stat-label">Vacaciones</div>
-        </div>
+      <div class="stats-bar__sep" aria-hidden="true"></div>
+      <div class="stats-bar__item">
+        <span class="stats-bar__value stats-bar__value--error"><%= stats.pending %></span>
+        <span class="stats-bar__label">Pendientes</span>
+      </div>
+      <div class="stats-bar__sep" aria-hidden="true"></div>
+      <div class="stats-bar__item">
+        <span class="stats-bar__value stats-bar__value--warning"><%= stats.holiday %></span>
+        <span class="stats-bar__label">Festivos</span>
+      </div>
+      <div class="stats-bar__sep" aria-hidden="true"></div>
+      <div class="stats-bar__item">
+        <span class="stats-bar__value stats-bar__value--info"><%= stats.vacation %></span>
+        <span class="stats-bar__label">Vacaciones</span>
       </div>
       <% if (stats.pending > 0) { %>
-      <div style="margin-top: 1rem;">
-        <button
-          type="button"
-          id="fill-pending-btn"
-          class="btn btn-warning"
-          data-first-pending="<%= firstPending %>"
-        >
-          <i class="fas fa-bolt"></i> Registrar <%= stats.pending %> días pendientes
-        </button>
-      </div>
+      <button
+        type="button"
+        id="fill-pending-btn"
+        class="btn btn-warning btn-sm"
+        data-first-pending="<%= firstPending %>"
+      >
+        <i class="fas fa-bolt"></i> Registrar <%= stats.pending %> pendientes
+      </button>
       <% } %>
     </div>
     <% } %>
 
-    <!-- Main Form Card -->
+    <!-- Action Card: Form + Results combined -->
     <div class="card">
       <div class="card-header">
         <i class="fas fa-calendar-plus"></i>
-        <h2>Registro de Horas</h2>
+        <h2>Registrar Horas</h2>
       </div>
 
       <form id="hours-form" method="POST" action="/submit" novalidate>
-        <div class="form-grid">
+        <!-- Hidden checkbox synced with global toggle -->
+        <input
+          type="checkbox"
+          id="dryRun"
+          name="dryRun"
+          class="sr-only"
+          <%= dryRun ? 'checked' : '' %>
+          aria-hidden="true"
+          tabindex="-1"
+        >
+
+        <div class="form-row">
           <div class="form-group">
             <label for="startDate">
-              <i class="fas fa-calendar-start"></i> Fecha de Inicio
+              <i class="fas fa-calendar-day"></i> Desde
             </label>
             <input
               type="date"
@@ -98,12 +124,12 @@
               value="<%= startDate ?? '' %>"
               aria-describedby="startDate-help"
             >
-            <div id="startDate-help" class="sr-only">Selecciona la fecha de inicio del período a registrar</div>
+            <div id="startDate-help" class="sr-only">Fecha de inicio del período a registrar</div>
           </div>
 
           <div class="form-group">
             <label for="endDate">
-              <i class="fas fa-calendar-end"></i> Fecha de Fin
+              <i class="fas fa-calendar-day"></i> Hasta
             </label>
             <input
               type="date"
@@ -113,69 +139,55 @@
               value="<%= endDate ?? '' %>"
               aria-describedby="endDate-help"
             >
-            <div id="endDate-help" class="sr-only">Selecciona la fecha de fin del período a registrar</div>
+            <div id="endDate-help" class="sr-only">Fecha de fin del período a registrar</div>
+          </div>
+
+          <div class="form-action">
+            <button type="submit" id="submit-btn" class="btn btn-primary">
+              <i id="submit-icon" class="fas <%= dryRun ? 'fa-eye' : 'fa-paper-plane' %>"></i>
+              <span id="submit-text"><%= dryRun ? 'Simular' : 'Registrar' %></span>
+            </button>
           </div>
         </div>
-
-        <div class="checkbox-group">
-          <input
-            type="checkbox"
-            id="dryRun"
-            name="dryRun"
-            <%= dryRun ? 'checked' : '' %>
-            aria-describedby="dryRun-help"
-          >
-          <label for="dryRun">
-            <i class="fas fa-eye"></i> Modo simulación (no enviar datos)
-          </label>
-          <div id="dryRun-help" class="sr-only">Activa esta opción para previsualizar los cambios sin enviarlos al sistema</div>
-        </div>
-
-        <div style="margin-top: 2rem;">
-          <button type="submit" id="submit-btn" class="btn btn-primary">
-            <i class="fas fa-paper-plane"></i>
-            <span id="submit-text">Enviar Registro</span>
-          </button>
-        </div>
       </form>
+
+      <!-- Results (inline, only shown after action) -->
+      <% if (results && results.length > 0) { %>
+      <%
+        const nProcessed = results.filter(r => r.status === 'submitted' || r.status === 'dry-run').length;
+        const nSubmitted = results.filter(r => r.status === 'submitted').length;
+        const nSimulated = results.filter(r => r.status === 'dry-run').length;
+      %>
+      <div class="results-section">
+        <div class="results-divider"><span>Resultados</span></div>
+        <div class="results-row">
+          <div class="results-stats">
+            <div class="result-item">
+              <span class="result-value"><%= nProcessed %></span>
+              <span class="result-label">Procesados</span>
+            </div>
+            <div class="result-item">
+              <span class="result-value result-value--success"><%= nSubmitted %></span>
+              <span class="result-label">Enviados</span>
+            </div>
+            <div class="result-item">
+              <span class="result-value result-value--simulated"><%= nSimulated %></span>
+              <span class="result-label">Simulados</span>
+            </div>
+          </div>
+          <a href="/" class="btn btn-ghost btn-sm">
+            <i class="fas fa-times"></i> Limpiar
+          </a>
+        </div>
+        <% if (nSimulated > 0) { %>
+        <div class="alert alert-warning" style="margin-top: 1rem; margin-bottom: 0;">
+          <i class="fas fa-bolt"></i>
+          <div><strong><%= nSimulated %> días simulados</strong> — no se han enviado datos al sistema.</div>
+        </div>
+        <% } %>
+      </div>
+      <% } %>
     </div>
-
-    <!-- Results Section -->
-    <% if (results && results.length > 0) { %>
-    <div class="card">
-      <div class="card-header">
-        <i class="fas fa-chart-bar"></i>
-        <h2>Resultados del Proceso</h2>
-      </div>
-
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-value"><%= results.filter(r => r.status === 'submitted' || r.status === 'dry-run').length %></div>
-          <div class="stat-label">Días Procesados</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value"><%= results.filter(r => r.status === 'submitted').length %></div>
-          <div class="stat-label">Días Enviados</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value"><%= results.filter(r => r.status === 'dry-run').length %></div>
-          <div class="stat-label">Días Simulados</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value"><%= results.filter(r => r.isHoliday).length %></div>
-          <div class="stat-label">Días Festivos</div>
-        </div>
-      </div>
-
-      <div class="alert alert-info">
-        <i class="fas fa-info-circle"></i>
-        <div>
-          <strong>Proceso completado:</strong> Se han procesado <%= results.length %> días en total.
-          <%= results.filter(r => r.status === 'dry-run').length > 0 ? ` ${results.filter(r => r.status === 'dry-run').length} días fueron simulados y no se enviaron.` : '' %>
-        </div>
-      </div>
-    </div>
-    <% } %>
 
     <!-- Calendar Section -->
     <% if (calendarData && calendarData.length > 0) { %>
