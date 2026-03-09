@@ -71,10 +71,10 @@ export async function submitHoursRange({ startDate, endDate, dryRun = true }) {
     const isTimeOff = Boolean(timeOffMap[isoDate]);
 
     if (cursor.weekday >= 1 && cursor.weekday <= 5 && !isTimeOff) {
-      console.log('Día laborable válido:', isoDate, 'weekday:', cursor.weekday);
+      logInfo('Día laborable válido', { date: isoDate, weekday: cursor.weekday });
       days.push(cursor);
     } else {
-      console.log('Saltando día (finde o festivo):', isoDate, 'weekday:', cursor.weekday);
+      logInfo('Saltando día (finde o festivo)', { date: isoDate, weekday: cursor.weekday });
     }
 
     cursor = cursor.plus({ days: 1 });
@@ -239,6 +239,8 @@ export async function getTimeOffDaysDetailed() {
     } else if (day?.IsLeaveDay === true) {
       map[iso] = 'leave';
     } else if (day?.IsWorkedDay === true) {
+      // IsWorkedDay=true dentro de un período de vacaciones indica un día compensado/trabajado
+      // que la API clasifica igualmente como vacaciones a efectos de no registrar horas
       map[iso] = 'vacation';
     }
   }

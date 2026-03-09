@@ -3,25 +3,17 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import bodyParser from 'body-parser';
-import { DateTime } from 'luxon';
 import fs from 'fs';
 import https from 'https';
-import { submitHoursRange, getRegisteredDaysFromReport, getRegisteredDays } from './logic.js';
-import { errorHandler, notFound, catchAsync, validateDateRange } from './middleware/errorHandler.js';
+import { errorHandler, notFound } from './middleware/errorHandler.js';
 import { logRequest } from './utils/logger.js';
 import { apiLimiter, submitLimiter } from './middleware/rateLimiter.js';
-import { getStats } from './utils/cache.js';
-import { get as cacheGet, set as cacheSet, del as cacheDel, cacheKeys, flushAll as cacheFlushAll, getKeys as cacheGetKeys } from './utils/cache.js';
-import { performDependencyHealthCheck } from './utils/dependencyManager.js';
-import { metricsMiddleware, getMetrics, recordError, recordApiCall, register } from './utils/metrics.js';
-import { scheduleBackups, getBackupStats } from './utils/backup.js';
-import { initDatabase, healthCheck as dbHealthCheck, auditLogs } from './utils/database.js';
-
-// Placeholder for holiday checking logic
-async function checkIfHoliday(date) {
-  // Implement holiday logic here. For now, return false.
-  return false;
-}
+import { metricsMiddleware } from './utils/metrics.js';
+import { scheduleBackups } from './utils/backup.js';
+import { initDatabase } from './utils/database.js';
+import healthRouter from './routes/health.js';
+import cacheRouter from './routes/cache.js';
+import createCalendarRouter from './routes/calendar.js';
 
 const app = express();
 
@@ -33,355 +25,35 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Favicon handler to avoid 404s
+// Favicon handler — serves a 1x1 transparent PNG to avoid 404s
 app.get('/favicon.ico', (req, res) => {
-  // 1x1 transparent PNG
-  const pngBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
-  const buf = Buffer.from(pngBase64, 'base64');
+  const buf = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=', 'base64');
   res.setHeader('Content-Type', 'image/png');
   res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
   res.send(buf);
 });
 
-// Health check endpoints
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    version: process.env.npm_package_version || '1.0.0',
-  });
-});
-
-app.get('/health/live', (req, res) => {
-  res.status(200).json({
-    status: 'alive',
-    timestamp: new Date().toISOString(),
-  });
-});
-
-app.get('/health/ready', async (req, res) => {
-  try {
-    // Check if we can connect to external services
-    // For now, just check if config is loaded
-    const config = await import('./config.js');
-
-    if (config.default.username && config.default.password) {
-      res.status(200).json({
-        status: 'ready',
-        timestamp: new Date().toISOString(),
-        services: {
-          config: 'loaded',
-          database: 'N/A', // No database in this app
-          external_api: 'configured',
-        },
-      });
-    } else {
-      res.status(503).json({
-        status: 'not ready',
-        timestamp: new Date().toISOString(),
-        message: 'Configuration not complete',
-      });
-    }
-  } catch (error) {
-    res.status(503).json({
-      status: 'not ready',
-      timestamp: new Date().toISOString(),
-      message: 'Service unavailable',
-      error: error.message,
-    });
-  }
-});
-
-app.get('/health/cache', (req, res) => {
-  const stats = getStats();
-  res.status(200).json({
-    status: 'cache_stats',
-    timestamp: new Date().toISOString(),
-    cache: {
-      ...stats,
-      hitRatePercentage: Math.round(stats.hitRate * 100 * 100) / 100, // Convert to percentage with 2 decimals
-    },
-  });
-});
-
-app.get('/health/dependencies', async (req, res) => {
-  try {
-    const healthCheck = performDependencyHealthCheck();
-    const statusCode = healthCheck.overall.status === 'healthy' ? 200 : 503;
-
-    res.status(statusCode).json({
-      status: 'dependency_health',
-      timestamp: new Date().toISOString(),
-      ...healthCheck
-    });
-  } catch (error) {
-    recordError('dependency_check', req.path);
-    res.status(500).json({
-      status: 'dependency_health_error',
-      timestamp: new Date().toISOString(),
-      error: error.message
-    });
-  }
-});
-
-app.get('/health/backups', (req, res) => {
-  try {
-    const backupStats = getBackupStats();
-    res.status(200).json({
-      status: 'backup_stats',
-      timestamp: new Date().toISOString(),
-      ...backupStats
-    });
-  } catch (error) {
-    recordError('backup_stats', req.path);
-    res.status(500).json({
-      status: 'backup_stats_error',
-      timestamp: new Date().toISOString(),
-      error: error.message
-    });
-  }
-});
-
-app.get('/health/database', async (req, res) => {
-  try {
-    const dbHealth = await dbHealthCheck();
-    const statusCode = dbHealth.status === 'healthy' ? 200 : 503;
-    res.status(statusCode).json({
-      status: 'database_health',
-      timestamp: new Date().toISOString(),
-      database: dbHealth
-    });
-  } catch (error) {
-    recordError('database_health', req.path);
-    res.status(500).json({
-      status: 'database_health_error',
-      timestamp: new Date().toISOString(),
-      error: error.message
-    });
-  }
-});
-
-// Prometheus metrics endpoint
-app.get('/metrics', async (req, res) => {
-  try {
-    res.set('Content-Type', register.contentType);
-    res.end(await getMetrics());
-  } catch (error) {
-    recordError('metrics_endpoint', req.path);
-    res.status(500).end('# Error generating metrics\n');
-  }
-});
-
-// Metrics middleware (must be first)
+// Middleware
 app.use(metricsMiddleware);
-
-// Request logging middleware
 app.use(logRequest);
-
-// Rate limiting middleware
 app.use('/submit', submitLimiter);
 app.use(apiLimiter);
 
+// Routes
+app.use(healthRouter);
+app.use(cacheRouter);
 
-app.get('/', catchAsync(async (req, res) => {
-  const today = new Date();
-  const startDate = new Date(today.getFullYear(), 0, 1);
-
-  const startISO = startDate.toISOString().slice(0, 10);
-  const endISO = today.toISOString().slice(0, 10);
-
-  const registered = await getRegisteredDays(startISO, endISO);
-  const calendarData = [];
-  let cursor = new Date(startDate);
-  while (cursor <= today) {
-    const iso = cursor.toISOString().slice(0, 10);
-    const day = cursor.getDay();
-    const find = registered.find(r => r.date === iso);
-    if ((day >= 1 && day <= 5) || find?.isHoliday) {
-      const isHoliday = !!find?.isHoliday;
-      calendarData.push({
-        date: iso,
-        status: isHoliday ? 'holiday' : (find?.status || 'pending'),
-        isHoliday,
-      });
-    }
-    cursor.setHours(12);
-    cursor.setDate(cursor.getDate() + 1);
-  }
-
-  const { submitted, start: qsStart, end: qsEnd, dry, job } = req.query || {};
-  const startPrefill = typeof qsStart === 'string' ? qsStart : '';
-  const endPrefill = typeof qsEnd === 'string' ? qsEnd : '';
-  const showSubmitted = submitted === '1';
-  // Default to simulation mode enabled when not specified
-  const dryRun = (typeof dry === 'undefined') ? true : (dry === '1');
-
-  // Load results from job cache if available; otherwise synthesize for dry-run
-  let synthesizedResults = [];
-  if (showSubmitted && job) {
-    const cached = cacheGet(`job_results_${job}`);
-    if (Array.isArray(cached)) {
-      synthesizedResults = cached;
-    }
-  }
-  if (showSubmitted && dryRun && startPrefill && endPrefill && synthesizedResults.length === 0) {
-    try {
-      const rangeStart = new Date(startPrefill);
-      const rangeEnd = new Date(endPrefill);
-      let cursorSim = new Date(rangeStart);
-      while (cursorSim <= rangeEnd) {
-        const iso = cursorSim.toISOString().slice(0, 10);
-        const dow = cursorSim.getDay();
-        const find = calendarData.find(d => d.date === iso);
-        const isHoliday = !!find?.isHoliday;
-        if (dow >= 1 && dow <= 5 && !isHoliday) {
-          synthesizedResults.push({ date: iso, dryRun: true, status: 'dry-run', isHoliday });
-        }
-        cursorSim.setHours(12);
-        cursorSim.setDate(cursorSim.getDate() + 1);
-      }
-    } catch {}
-  }
-
-  res.render('index', {
-    results: synthesizedResults,
-    calendarData,
-    startDate: startPrefill,
-    endDate: endPrefill,
-    isLoading: false,
-    submitted: showSubmitted,
-    dryRun,
-  });
-}));
-
-app.post('/submit', validateDateRange, catchAsync(async (req, res) => {
-  const { dryRun } = req.body;
-  const { startISO, endISO } = req.validatedDates;
-  const isDryRunActive = dryRun === 'on';
-
-  // Log audit event
-  if (dbInitialized) {
-    await auditLogs.log('hours_submitted', {
-      startDate: startISO,
-      endDate: endISO,
-      dryRun: isDryRunActive,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-  }
-
-  const results = await submitHoursRange({
-    startDate: startISO,
-    endDate: endISO,
-    dryRun: isDryRunActive,
-  });
-
-  const today = new Date();
-  const yearStart = new Date(today.getFullYear(), 0, 1);
-  const calendarStartISO = yearStart.toISOString().slice(0, 10);
-  const calendarEndISO = today.toISOString().slice(0, 10);
-
-  // Invalidate cached registered days so the UI reflects fresh data
-  try {
-    cacheDel(cacheKeys.registeredDays(startISO, endISO));
-    cacheDel(cacheKeys.registeredDays(calendarStartISO, calendarEndISO));
-  } catch {}
-  const registered = await getRegisteredDays(calendarStartISO, calendarEndISO);
-
-  const calendarData = [];
-  let cursor = new Date(yearStart);
-  while (cursor <= today) {
-    const iso = cursor.toISOString().slice(0, 10);
-    const day = cursor.getDay();
-    const find = registered.find(r => r.date === iso);
-
-    if ((day >= 1 && day <= 5) || find?.isHoliday) {
-      const isHoliday = !!find?.isHoliday;
-      calendarData.push({
-        date: iso,
-        status: isHoliday ? 'holiday' : (find?.status || 'pending'),
-        isHoliday,
-      });
-    }
-    cursor.setHours(12);
-    cursor.setDate(cursor.getDate() + 1);
-  }
-
-  // Store results temporarily to show after redirect (works for both dry-run and real submissions)
-  const jobId = `${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
-  try { cacheSet(`job_results_${jobId}`, results, 600); } catch {}
-
-  // Use PRG to avoid resubmission on refresh
-  return res.redirect(303, `/?submitted=1&start=${encodeURIComponent(startISO)}&end=${encodeURIComponent(endISO)}&dry=${dryRun === 'on' ? '1' : '0'}&job=${encodeURIComponent(jobId)}`);
-}));
-
-app.post('/submit-day', validateDateRange, catchAsync(async (req, res) => {
-  const { dryRun } = req.body;
-  const { startISO, endISO } = req.validatedDates;
-
-  const isDryRun = dryRun === 'on';
-
-  const results = await submitHoursRange({
-    startDate: startISO,
-    endDate: endISO,
-    dryRun: isDryRun,
-  });
-
-
-  try {
-    const today = new Date();
-    const yearStart = new Date(today.getFullYear(), 0, 1);
-    const calendarStartISO = yearStart.toISOString().slice(0, 10);
-    const calendarEndISO = today.toISOString().slice(0, 10);
-
-    cacheDel(cacheKeys.registeredDays(startISO, endISO));
-    cacheDel(cacheKeys.registeredDays(calendarStartISO, calendarEndISO));
-  } catch {
-    // if cache fails, ignore it
-  }
-
-  return res.json({
-    success: true,
-    dryRun: isDryRun,
-    results,
-  });
-}));
-
-
-// Simple cache admin endpoints (optional)
-app.get('/cache/keys', (req, res) => {
-  res.json({ keys: cacheGetKeys() });
-});
-
-app.get('/cache/stats', (req, res) => {
-  res.json({ stats: getStats() });
-});
-
-app.post('/cache/flush', (req, res) => {
-  cacheFlushAll();
-  res.json({ ok: true });
-});
-
-app.delete('/cache', (req, res) => {
-  const { key } = req.query;
-  if (!key) return res.status(400).json({ error: 'key is required' });
-  const ok = cacheDel(String(key));
-  res.json({ ok });
-});
-
-// Error handling middleware (must be after routes)
-app.use(notFound);
-app.use(errorHandler);
-
-// Export app for testing
-export default app;
-
-// Initialize database (if configured)
+// Database init (must run before calendar routes so dbInitialized is known)
 let dbInitialized = false;
 if (process.env.DB_PASSWORD) {
   dbInitialized = await initDatabase();
 }
+
+app.use(createCalendarRouter({ dbInitialized }));
+
+// Error handling (must be after routes)
+app.use(notFound);
+app.use(errorHandler);
 
 // Schedule automated backups in production
 if (process.env.NODE_ENV === 'production') {
@@ -389,7 +61,7 @@ if (process.env.NODE_ENV === 'production') {
   scheduleBackups(backupInterval);
 }
 
-// Start server only if not in test environment
+// Start server
 if (process.env.NODE_ENV !== 'test') {
   const port = process.env.PORT || 3000;
   const useHttps = process.env.USE_HTTPS === 'true';
@@ -399,16 +71,14 @@ if (process.env.NODE_ENV !== 'test') {
     const cert = fs.readFileSync(process.env.SSL_CERT_PATH || 'cert.pem');
     https.createServer({ key, cert }, app).listen(port, () => {
       console.info(`Servidor HTTPS iniciado en https://localhost:${port}`);
-      if (dbInitialized) {
-        console.info('Base de datos inicializada correctamente');
-      }
+      if (dbInitialized) console.info('Base de datos inicializada correctamente');
     });
   } else {
     app.listen(port, () => {
       console.info(`Servidor iniciado en http://localhost:${port}`);
-      if (dbInitialized) {
-        console.info('Base de datos inicializada correctamente');
-      }
+      if (dbInitialized) console.info('Base de datos inicializada correctamente');
     });
   }
 }
+
+export default app;
