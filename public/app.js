@@ -162,6 +162,9 @@ document.addEventListener('DOMContentLoaded', async function () {
 
   function applyCalendarFilters() {
     document.querySelectorAll('.calendar-day').forEach(day => {
+      // Weekend and empty cells are structural grid elements — never hide them
+      // (hiding them with display:none removes them from the CSS grid and breaks alignment)
+      if (day.classList.contains('weekend') || day.classList.contains('calendar-day--empty')) return;
       const visible = Array.from(activeStatuses).some(s => day.classList.contains(s));
       day.style.display = visible ? '' : 'none';
     });

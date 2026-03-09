@@ -4,11 +4,21 @@ import { catchAsync, validateDateRange } from '../middleware/errorHandler.js';
 import { get as cacheGet, set as cacheSet, del as cacheDel, cacheKeys } from '../utils/cache.js';
 import { auditLogs } from '../utils/database.js';
 
+// Returns a local YYYY-MM-DD string without UTC conversion
+function localDateStr(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 function buildCalendarData(registered, startDate, today) {
   const calendarData = [];
+  const todayStr = localDateStr(today);
   let cursor = new Date(startDate);
-  while (cursor <= today) {
-    const iso = cursor.toISOString().slice(0, 10);
+  cursor.setHours(12, 0, 0, 0); // noon to avoid UTC midnight timezone drift
+  while (localDateStr(cursor) <= todayStr) {
+    const iso = localDateStr(cursor);
     const day = cursor.getDay(); // 0=Sun, 6=Sat
     const isWeekend = day === 0 || day === 6;
     const find = registered.find(r => r.date === iso);
@@ -18,7 +28,6 @@ function buildCalendarData(registered, startDate, today) {
       status: isWeekend ? 'weekend' : (isHoliday ? 'holiday' : (find?.status || 'pending')),
       isHoliday,
     });
-    cursor.setHours(12);
     cursor.setDate(cursor.getDate() + 1);
   }
   return calendarData;
@@ -60,17 +69,18 @@ export default function createCalendarRouter({ dbInitialized }) {
     }
     if (showSubmitted && dryRun && startPrefill && endPrefill && synthesizedResults.length === 0) {
       try {
-        const rangeStart = new Date(startPrefill);
-        const rangeEnd = new Date(endPrefill);
-        let cursorSim = new Date(rangeStart);
-        while (cursorSim <= rangeEnd) {
-          const iso = cursorSim.toISOString().slice(0, 10);
+        const rangeEndStr = endPrefill;
+        let cursorSim = new Date(startPrefill);
+        cursorSim.setHours(12, 0, 0, 0);
+        while (localDateStr(cursorSim) <= rangeEndStr) {
+          const iso = localDateStr(cursorSim);
           const dow = cursorSim.getDay();
           const find = calendarData.find(d => d.date === iso);
-          if (dow >= 1 && dow <= 5 && !find?.isHoliday) {
+          const status = find?.status;
+          const isPending = status === 'pending';
+          if (dow >= 1 && dow <= 5 && isPending) {
             synthesizedResults.push({ date: iso, dryRun: true, status: 'dry-run', isHoliday: false });
           }
-          cursorSim.setHours(12);
           cursorSim.setDate(cursorSim.getDate() + 1);
         }
       } catch {}
