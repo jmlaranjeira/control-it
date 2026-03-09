@@ -7,574 +7,7 @@
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-  <style>
-    :root {
-      --primary-color: #2563eb;
-      --primary-dark: #1d4ed8;
-      --success-color: #10b981;
-      --warning-color: #f59e0b;
-      --error-color: #ef4444;
-      --info-color: #06b6d4;
-      --gray-50: #f9fafb;
-      --gray-100: #f3f4f6;
-      --gray-200: #e5e7eb;
-      --gray-300: #d1d5db;
-      --gray-400: #9ca3af;
-      --gray-500: #6b7280;
-      --gray-600: #4b5563;
-      --gray-700: #374151;
-      --gray-800: #1f2937;
-      --gray-900: #111827;
-      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-      --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-      --border-radius: 8px;
-      --border-radius-lg: 12px;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
-      color: var(--gray-800);
-      line-height: 1.6;
-      min-height: 100vh;
-    }
-
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 2rem;
-    }
-
-    .header {
-      text-align: center;
-      margin-bottom: 3rem;
-    }
-
-    .header h1 {
-      font-size: 2.5rem;
-      font-weight: 700;
-      color: var(--gray-900);
-      margin-bottom: 0.5rem;
-      background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .header p {
-      color: var(--gray-600);
-      font-size: 1.1rem;
-    }
-
-    .card {
-      background: white;
-      border-radius: var(--border-radius-lg);
-      box-shadow: var(--shadow);
-      padding: 2rem;
-      margin-bottom: 2rem;
-      border: 1px solid var(--gray-200);
-    }
-
-    .card-header {
-      display: flex;
-      align-items: center;
-      margin-bottom: 1.5rem;
-      padding-bottom: 1rem;
-      border-bottom: 1px solid var(--gray-200);
-    }
-
-    .card-header i {
-      font-size: 1.5rem;
-      color: var(--primary-color);
-      margin-right: 0.75rem;
-    }
-
-    .card-header h2 {
-      font-size: 1.5rem;
-      font-weight: 600;
-      color: var(--gray-900);
-    }
-
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 2rem;
-      margin-bottom: 2rem;
-    }
-
-    .form-group {
-      margin-bottom: 1.5rem;
-    }
-
-    .form-group label {
-      display: block;
-      font-weight: 500;
-      color: var(--gray-700);
-      margin-bottom: 0.5rem;
-      font-size: 0.95rem;
-    }
-
-    .form-group input[type="date"],
-    .form-group input[type="text"] {
-      width: 100%;
-      padding: 0.75rem 1rem;
-      border: 2px solid var(--gray-300);
-      border-radius: var(--border-radius);
-      font-size: 1rem;
-      transition: all 0.2s ease;
-      background: white;
-    }
-
-    .form-group input[type="date"]:focus,
-    .form-group input[type="text"]:focus {
-      outline: none;
-      border-color: var(--primary-color);
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-    }
-
-    form.validated .form-group input[type="date"]:invalid {
-      border-color: var(--error-color);
-    }
-
-    .checkbox-group {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 1rem;
-      background: var(--gray-50);
-      border-radius: var(--border-radius);
-      border: 1px solid var(--gray-200);
-    }
-
-    .checkbox-group input[type="checkbox"] {
-      width: 1.2rem;
-      height: 1.2rem;
-      accent-color: var(--primary-color);
-    }
-
-    .checkbox-group label {
-      font-weight: 500;
-      color: var(--gray-700);
-      cursor: pointer;
-      margin: 0;
-    }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.875rem 2rem;
-      border: none;
-      border-radius: var(--border-radius);
-      font-size: 1rem;
-      font-weight: 600;
-      text-decoration: none;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-      color: white;
-      box-shadow: var(--shadow);
-    }
-
-    .btn-primary:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-lg);
-    }
-
-    .btn-primary:active {
-      transform: translateY(0);
-    }
-
-    .btn-success {
-      background: var(--success-color);
-      color: white;
-    }
-
-    .btn-loading {
-      position: relative;
-      color: transparent;
-    }
-
-    .btn-loading::after {
-      content: '';
-      position: absolute;
-      width: 1rem;
-      height: 1rem;
-      top: 50%;
-      left: 50%;
-      margin-left: -0.5rem;
-      margin-top: -0.5rem;
-      border: 2px solid transparent;
-      border-top: 2px solid currentColor;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    .loading-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(255, 255, 255, 0.9);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-      backdrop-filter: blur(4px);
-    }
-
-    .loading-content {
-      text-align: center;
-      padding: 2rem;
-      background: white;
-      border-radius: var(--border-radius-lg);
-      box-shadow: var(--shadow-lg);
-    }
-
-    .loading-spinner {
-      width: 3rem;
-      height: 3rem;
-      border: 4px solid var(--gray-200);
-      border-top: 4px solid var(--primary-color);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 1rem;
-    }
-
-    .loading-text {
-      color: var(--gray-700);
-      font-weight: 500;
-      margin-bottom: 0.5rem;
-    }
-
-    .loading-subtext {
-      color: var(--gray-500);
-      font-size: 0.9rem;
-    }
-
-    .calendar-container {
-      margin-top: 2rem;
-    }
-
-    .calendar-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1.5rem;
-      flex-wrap: wrap;
-      gap: 1rem;
-    }
-
-    .calendar-title {
-      font-size: 1.5rem;
-      font-weight: 600;
-      color: var(--gray-900);
-    }
-
-    .legend {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      align-items: center;
-    }
-
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.9rem;
-      font-weight: 500;
-      color: var(--gray-700);
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .legend-color {
-      width: 1rem;
-      height: 1rem;
-      border-radius: 4px;
-      border: 2px solid var(--gray-300);
-    }
-
-    /* Legend color swatches to match calendar-day styles */
-    .legend-color.registered { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: #16a34a; }
-    .legend-color.pending { background: linear-gradient(135deg, #fef2f2, #fecaca); border-color: #dc2626; }
-    .legend-color.holiday { background: linear-gradient(135deg, #fffbeb, #fde68a); border-color: #d97706; }
-    .legend-color.vacation { background: linear-gradient(135deg, #e0f2fe, #bae6fd); border-color: #0284c7; }
-    .legend-color.leave { background: linear-gradient(135deg, #f5f3ff, #ddd6fe); border-color: #7c3aed; }
-    .legend-color.simulated { background: linear-gradient(135deg, #fefce8, #fde047); border-color: #ca8a04; }
-
-    /* Legend toggle state */
-    .legend-item[aria-pressed="false"] { opacity: 0.5; }
-    .legend-item[aria-pressed="true"] { opacity: 1; }
-
-    .month-section {
-      margin-bottom: 2rem;
-    }
-
-    .month-title {
-      font-size: 1.25rem;
-      font-weight: 600;
-      color: var(--gray-800);
-      margin-bottom: 1rem;
-      padding-bottom: 0.5rem;
-      border-bottom: 2px solid var(--gray-200);
-    }
-
-    .calendar {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 0.5rem;
-      margin-bottom: 2rem;
-    }
-
-    .calendar-day {
-      aspect-ratio: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: 2px solid var(--gray-200);
-      border-radius: var(--border-radius);
-      font-weight: 600;
-      font-size: 0.9rem;
-      transition: all 0.2s ease;
-      cursor: pointer;
-      position: relative;
-      background: white;
-    }
-
-    .calendar-day:hover {
-      transform: scale(1.05);
-      box-shadow: var(--shadow);
-      z-index: 10;
-    }
-
-    .calendar-day.registered {
-      background: linear-gradient(135deg, #dcfce7, #bbf7d0);
-      border-color: #16a34a;
-      color: #166534;
-    }
-
-    .calendar-day.pending {
-      background: linear-gradient(135deg, #fef2f2, #fecaca);
-      border-color: #dc2626;
-      color: #991b1b;
-    }
-
-    .calendar-day.holiday {
-      background: linear-gradient(135deg, #fffbeb, #fde68a);
-      border-color: #d97706;
-      color: #92400e;
-    }
-
-    .calendar-day.vacation {
-      background: linear-gradient(135deg, #e0f2fe, #bae6fd);
-      border-color: #0284c7;
-      color: #075985;
-    }
-
-    .calendar-day.leave {
-      background: linear-gradient(135deg, #f5f3ff, #ddd6fe);
-      border-color: #7c3aed;
-      color: #5b21b6;
-    }
-
-    .calendar-day.simulated {
-      background: linear-gradient(135deg, #fefce8, #fde047);
-      border-color: #ca8a04;
-      color: #a16207;
-      position: relative;
-    }
-
-    .calendar-day.simulated::after {
-      content: '⚡';
-      position: absolute;
-      top: -2px;
-      right: -2px;
-      font-size: 0.7rem;
-    }
-
-    .calendar-day.today {
-      box-shadow: 0 0 0 3px var(--primary-color);
-    }
-
-    .calendar-day.weekend {
-      background: var(--gray-50);
-      color: var(--gray-400);
-      border-color: var(--gray-300);
-    }
-
-    .alert {
-      padding: 1rem 1.5rem;
-      border-radius: var(--border-radius);
-      margin-bottom: 1rem;
-      display: flex;
-      align-items: flex-start;
-      gap: 0.75rem;
-    }
-
-    .alert-success {
-      background: #dcfce7;
-      border: 1px solid #bbf7d0;
-      color: #166534;
-    }
-
-    .alert-error {
-      background: #fef2f2;
-      border: 1px solid #fecaca;
-      color: #991b1b;
-    }
-
-    .alert-warning {
-      background: #fffbeb;
-      border: 1px solid #fde68a;
-      color: #92400e;
-    }
-
-    .alert-info {
-      background: #eff6ff;
-      border: 1px solid #bfdbfe;
-      color: #1e40af;
-    }
-
-    .alert i {
-      font-size: 1.1rem;
-      margin-top: 0.1rem;
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-      margin-bottom: 2rem;
-    }
-
-    .stat-card {
-      background: var(--gray-50);
-      padding: 1.5rem;
-      border-radius: var(--border-radius);
-      border: 1px solid var(--gray-200);
-      text-align: center;
-    }
-
-    .stat-value {
-      font-size: 2rem;
-      font-weight: 700;
-      color: var(--primary-color);
-      margin-bottom: 0.25rem;
-    }
-
-    .stat-label {
-      color: var(--gray-600);
-      font-size: 0.9rem;
-      font-weight: 500;
-    }
-
-    @media (max-width: 768px) {
-      .container {
-        padding: 1rem;
-      }
-
-      .header h1 {
-        font-size: 2rem;
-      }
-
-      .form-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .calendar {
-        grid-template-columns: repeat(7, 1fr);
-        gap: 0.25rem;
-      }
-
-      .calendar-day {
-        font-size: 0.8rem;
-        padding: 0.5rem;
-      }
-
-      .legend {
-        justify-content: center;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .calendar {
-        grid-template-columns: repeat(7, minmax(35px, 1fr));
-      }
-
-      .calendar-day {
-        font-size: 0.75rem;
-        min-height: 35px;
-      }
-    }
-
-    /* Accessibility improvements */
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
-    }
-
-    .calendar-day:focus {
-      outline: 2px solid var(--primary-color);
-      outline-offset: 2px;
-    }
-
-    /* High contrast mode support */
-    @media (prefers-contrast: high) {
-      .calendar-day {
-        border-width: 3px;
-      }
-    }
-
-    /* Reduced motion support */
-    @media (prefers-reduced-motion: reduce) {
-      .calendar-day,
-      .btn,
-      .loading-spinner {
-        transition: none;
-        animation: none;
-      }
-
-      .calendar-day:hover {
-        transform: none;
-      }
-
-      .btn:hover {
-        transform: none;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="/app.css">
 </head>
 <body>
   <div class="container">
@@ -602,6 +35,46 @@
           <%= startDate %> a <%= endDate %><%= dryRun ? ' (simulado)' : '' %>.
         </div>
       </div>
+    <% } %>
+
+    <!-- Stats Panel -->
+    <% if (typeof stats !== 'undefined') { %>
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-chart-pie"></i>
+        <h2>Resumen del Año</h2>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" style="color: var(--success-color);"><%= stats.registered %></div>
+          <div class="stat-label">Días Registrados</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: var(--error-color);"><%= stats.pending %></div>
+          <div class="stat-label">Días Pendientes</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: var(--warning-color);"><%= stats.holiday %></div>
+          <div class="stat-label">Días Festivos</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: var(--info-color);"><%= stats.vacation %></div>
+          <div class="stat-label">Vacaciones</div>
+        </div>
+      </div>
+      <% if (stats.pending > 0) { %>
+      <div style="margin-top: 1rem;">
+        <button
+          type="button"
+          id="fill-pending-btn"
+          class="btn btn-warning"
+          data-first-pending="<%= firstPending %>"
+        >
+          <i class="fas fa-bolt"></i> Registrar <%= stats.pending %> días pendientes
+        </button>
+      </div>
+      <% } %>
+    </div>
     <% } %>
 
     <!-- Main Form Card -->
@@ -746,9 +219,7 @@
         const groupedByMonth = {};
         calendarData.forEach(day => {
           const monthKey = day.date.slice(0, 7); // "YYYY-MM"
-          if (!groupedByMonth[monthKey]) {
-            groupedByMonth[monthKey] = [];
-          }
+          if (!groupedByMonth[monthKey]) groupedByMonth[monthKey] = [];
           groupedByMonth[monthKey].push(day);
         });
 
@@ -767,18 +238,27 @@
       %>
         <div class="month-section">
           <h3 class="month-title"><%= monthLabel %></h3>
+          <div class="calendar-weekdays">
+            <% ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].forEach(function(d) { %>
+              <div class="calendar-weekday-header"><%= d %></div>
+            <% }); %>
+          </div>
           <div class="calendar" role="grid" aria-label="Calendario de <%= monthLabel %>">
+            <%
+              const firstDayOfMonth = new Date(monthKey + '-01');
+              const offset = (firstDayOfMonth.getDay() + 6) % 7; // Mon=0, ..., Sun=6
+              for (let i = 0; i < offset; i++) { %>
+              <div class="calendar-day calendar-day--empty" aria-hidden="true"></div>
+            <% } %>
             <% groupedByMonth[monthKey].forEach(day => {
                  const dayNumber = day.date.slice(8);
                  const isToday = day.date === today;
-                 const isWeekend = new Date(day.date).getDay() === 0 || new Date(day.date).getDay() === 6;
                  const isDryRun = Array.isArray(results) && results.some(r => r.date === day.date && r.dryRun);
-                 let classes = ['calendar-day'];
+                 const classes = ['calendar-day'];
                  if (day.status) classes.push(day.status);
                  if (day.isHoliday) classes.push('holiday');
                  if (isDryRun) classes.push('simulated');
                  if (isToday) classes.push('today');
-                 if (isWeekend && !day.isHoliday) classes.push('weekend');
 
                  const statusText =
                    day.status === 'holiday' ? 'Día festivo' :
@@ -786,6 +266,7 @@
                    day.status === 'leave' ? 'Permiso' :
                    day.status === 'registered' ? 'Horas registradas' :
                    day.status === 'pending' ? 'Horas pendientes' :
+                   day.status === 'weekend' ? 'Fin de semana' :
                    'Sin registro';
                  const ariaLabel = `${dayNumber} de ${monthLabel}: ${statusText}${isDryRun ? ' (Simulado)' : ''}`;
             %>
@@ -808,260 +289,6 @@
     <% } %>
   </div>
 
-  <script>
-    // Enhanced form handling with better UX
-    document.addEventListener('DOMContentLoaded', async function() {
-      const form = document.getElementById('hours-form');
-      const submitBtn = document.getElementById('submit-btn');
-      const submitText = document.getElementById('submit-text');
-      const loadingOverlay = document.getElementById('loading-overlay');
-      const alertContainer = document.getElementById('alert-container');
-
-      // Form validation
-      function validateForm() {
-        const startDate = document.getElementById('startDate');
-        const endDate = document.getElementById('endDate');
-        let isValid = true;
-
-        // Clear previous errors
-        clearAlerts();
-
-        if (!startDate.value) {
-          showAlert('La fecha de inicio es obligatoria', 'error');
-          isValid = false;
-        }
-
-        if (!endDate.value) {
-          showAlert('La fecha de fin es obligatoria', 'error');
-          isValid = false;
-        }
-
-        if (startDate.value && endDate.value && startDate.value > endDate.value) {
-          showAlert('La fecha de inicio no puede ser posterior a la fecha de fin', 'error');
-          isValid = false;
-        }
-
-        return isValid;
-      }
-
-      // Show alert messages
-      function showAlert(message, type = 'info') {
-        const alert = document.createElement('div');
-        alert.className = `alert alert-${type}`;
-        alert.innerHTML = `
-          <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
-          <div>${message}</div>
-        `;
-        alertContainer.appendChild(alert);
-
-        // Auto-remove after 5 seconds
-        setTimeout(() => {
-          if (alert.parentNode) {
-            alert.remove();
-          }
-        }, 5000);
-      }
-
-      // Clear all alerts
-      function clearAlerts() {
-        alertContainer.innerHTML = '';
-      }
-
-      // Enhanced form submission
-      form.addEventListener('submit', function(e) {
-        if (!validateForm()) {
-          e.preventDefault();
-          return false;
-        }
-
-        // Show loading state
-        submitBtn.disabled = true;
-        submitBtn.classList.add('btn-loading');
-        submitText.textContent = 'Procesando...';
-        loadingOverlay.style.display = 'flex';
-
-        // Add timeout for long-running requests
-        setTimeout(() => {
-          if (submitBtn.disabled) {
-            showAlert('La solicitud está tardando más de lo esperado. Por favor, espera...', 'warning');
-          }
-        }, 10000);
-      });
-
-      // Enhanced date validation
-      const startDateInput = document.getElementById('startDate');
-      const endDateInput = document.getElementById('endDate');
-
-      function validateDateRange() {
-        const start = new Date(startDateInput.value);
-        const end = new Date(endDateInput.value);
-        const today = new Date();
-
-        if (start > end) {
-          endDateInput.setCustomValidity('La fecha de fin debe ser posterior a la fecha de inicio');
-        } else if (end > today) {
-          endDateInput.setCustomValidity('La fecha de fin no puede ser futura');
-        } else {
-          endDateInput.setCustomValidity('');
-        }
-      }
-
-      startDateInput.addEventListener('change', validateDateRange);
-      endDateInput.addEventListener('change', validateDateRange);
-
-      const calendarContainer = document.querySelector('.calendar-container');
-
-      if (calendarContainer && form && startDateInput && endDateInput) {
-        calendarContainer.addEventListener('click', async function (event) {
-          const dayEl = event.target.closest('.calendar-day');
-          console.log('Calendar clicked', dayEl.dataset,);
-
-          if (!dayEl) return;
-
-          const status = dayEl.dataset.status || '';
-          if (status !== 'pending') {
-            return;
-          }
-
-          const date = dayEl.dataset.date;
-          if (!date) return;
-
-          startDateInput.value = date;
-          endDateInput.value = date;
-          
-        const body = new URLSearchParams();
-          body.set('startDate', date);
-          body.set('endDate', date);
-          const isDryRun = document.getElementById('dryRun').checked;
-          if (isDryRun) {
-            body.set('dryRun', 'on');
-          }
-
-          try {
-              const response = await fetch('/submit-day', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-              },
-              body: body.toString(),
-            });
-
-            if (response.status == 200) {
-              if (!isDryRun) {
-                dayEl.classList.remove('pending');
-                dayEl.classList.add('registered');
-                dayEl.dataset.status = 'registered';
-              } else {
-                dayEl.classList.add('simulated');
-              }
-            }
-          } catch (error) {
-            console.log('Error submitting single day', error);
-            throw error;
-          }
-        });
-      }
-
-      // Legend filters: toggle visibility by status
-      const legendItems = Array.from(document.querySelectorAll('.legend .legend-item'));
-      // Load filters from localStorage if present
-      const stored = (() => { try { return JSON.parse(localStorage.getItem('calendarFilters') || '[]'); } catch { return []; } })();
-      const defaultStatuses = ['registered','pending','holiday','vacation','leave','simulated'];
-      const activeStatuses = new Set(Array.isArray(stored) && stored.length ? stored : defaultStatuses);
-
-      function applyCalendarFilters() {
-        const days = document.querySelectorAll('.calendar-day');
-        days.forEach(day => {
-          // Show if day has any active status
-          const visible = Array.from(activeStatuses).some(s => day.classList.contains(s));
-          day.style.display = visible ? '' : 'none';
-        });
-      }
-
-      function toggleLegendItem(item) {
-        const status = item.getAttribute('data-status');
-        const pressed = item.getAttribute('aria-pressed') === 'true';
-        const next = !pressed;
-
-        // Ensure at least one status remains active
-        if (!next && activeStatuses.size === 1 && activeStatuses.has(status)) {
-          return; // do nothing if it would disable the last active filter
-        }
-
-        item.setAttribute('aria-pressed', String(next));
-        if (next) activeStatuses.add(status); else activeStatuses.delete(status);
-        try { localStorage.setItem('calendarFilters', JSON.stringify(Array.from(activeStatuses))); } catch {}
-        applyCalendarFilters();
-      }
-
-      // Initialize legend pressed state from activeStatuses
-      legendItems.forEach(item => {
-        const status = item.getAttribute('data-status');
-        item.setAttribute('aria-pressed', String(activeStatuses.has(status)));
-      });
-
-      legendItems.forEach(item => {
-        item.addEventListener('click', () => toggleLegendItem(item));
-        item.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            toggleLegendItem(item);
-          }
-        });
-      });
-
-      // Initial filter application (no-op but keeps behavior explicit)
-      applyCalendarFilters();
-
-      // Form validation UX: only mark invalid after an attempt
-      form.addEventListener('submit', function(e) {
-        if (!validateForm()) {
-          form.classList.add('validated');
-        }
-      }, { capture: true });
-
-      // Keyboard navigation for calendar
-      document.addEventListener('keydown', function(e) {
-        const focused = document.activeElement;
-        if (focused.classList.contains('calendar-day')) {
-          const days = Array.from(document.querySelectorAll('.calendar-day'));
-          const currentIndex = days.indexOf(focused);
-
-          switch(e.key) {
-            case 'ArrowRight':
-              e.preventDefault();
-              if (currentIndex < days.length - 1) days[currentIndex + 1].focus();
-              break;
-            case 'ArrowLeft':
-              e.preventDefault();
-              if (currentIndex > 0) days[currentIndex - 1].focus();
-              break;
-            case 'ArrowDown':
-              e.preventDefault();
-              if (currentIndex + 7 < days.length) days[currentIndex + 7].focus();
-              break;
-            case 'ArrowUp':
-              e.preventDefault();
-              if (currentIndex - 7 >= 0) days[currentIndex - 7].focus();
-              break;
-          }
-        }
-      });
-      // Auto-hide loading on page load (for back navigation)
-      window.addEventListener('load', function() {
-        loadingOverlay.style.display = 'none';
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          submitBtn.classList.remove('btn-loading');
-          submitText.textContent = 'Enviar Registro';
-        }
-      });
-
-      // Service worker for offline capability (future enhancement)
-      if ('serviceWorker' in navigator) {
-        // Register service worker for caching (can be added later)
-      }
-    });
-  </script>
+  <script src="/app.js"></script>
 </body>
 </html>

@@ -1,5 +1,6 @@
 module.exports = {
   testEnvironment: 'node',
+  transform: {},
   testMatch: ['**/tests/**/*.test.js'],
   collectCoverageFrom: [
     'server.js',
@@ -12,7 +13,6 @@ module.exports = {
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
-  testTimeout: 10000,
+testTimeout: 10000,
   passWithNoTests: true
 };
