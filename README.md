@@ -92,7 +92,7 @@ Submitting hours invalidates the relevant registered‑days cache keys to reflec
 - POST `/submit` — Submit or simulate hours; redirects back to `/`
 - GET `/metrics` — Prometheus metrics
 - GET `/health`, `/health/live`, `/health/ready` — health checks
-- GET `/health/cache`, `/health/dependencies`, `/health/backups`, `/health/database`
+- GET `/health/cache`, `/health/dependencies`, `/health/backups`
 - GET `/favicon.ico` — served to avoid 404s
 
 ## Testing
@@ -117,5 +117,4 @@ openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -node
 ## Notes
 
 - Node 18 users: Cheerio is pinned to `1.0.0` to avoid Undici API issues; Node 20+ can upgrade.
-- Database features initialize only if `DB_PASSWORD` is set; not required for core usage.
 - Use `CACHE_DISABLED=true` if no changes appear due to caching while iterating in development.

@@ -152,9 +152,6 @@ health_check() {
 post_deployment_tasks() {
     log_info "Running post-deployment tasks..."
 
-    # Run database migrations if needed
-    # docker-compose exec app npm run migrate 2>/dev/null || true
-
     # Clear application cache
     # docker-compose exec app npm run cache:clear 2>/dev/null || true
 

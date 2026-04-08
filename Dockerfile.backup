@@ -6,7 +6,6 @@ RUN apk add --no-cache \
     tar \
     gzip \
     curl \
-    postgresql-client \
     redis
 
 # Create app user

@@ -25,38 +25,12 @@ services:
       - ./monitoring/grafana/provisioning:/app/monitoring/grafana/provisioning
     networks:
       - controlit-network
-    depends_on:
-      - postgres
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  postgres:
-    image: postgres:15-alpine
-    container_name: controlit-postgres
-    restart: unless-stopped
-    environment:
-      - POSTGRES_DB=controlit
-      - POSTGRES_USER=${DB_USER:-controlit}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
-    networks:
-      - controlit-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-controlit} -d controlit"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
     logging:
       driver: "json-file"
       options:
@@ -175,8 +149,6 @@ services:
         max-file: "3"
 
 volumes:
-  postgres_data:
-    driver: local
   redis_data:
     driver: local
   prometheus_data:

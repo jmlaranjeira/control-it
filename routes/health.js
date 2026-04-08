@@ -3,7 +3,6 @@ import { getStats } from '../utils/cache.js';
 import { performDependencyHealthCheck } from '../utils/dependencyManager.js';
 import { recordError, getMetrics, register } from '../utils/metrics.js';
 import { getBackupStats } from '../utils/backup.js';
-import { healthCheck as dbHealthCheck } from '../utils/database.js';
 
 const router = Router();
 
@@ -27,7 +26,7 @@ router.get('/health/ready', async (req, res) => {
       res.status(200).json({
         status: 'ready',
         timestamp: new Date().toISOString(),
-        services: { config: 'loaded', database: 'N/A', external_api: 'configured' },
+        services: { config: 'loaded', external_api: 'configured' },
       });
     } else {
       res.status(503).json({ status: 'not ready', timestamp: new Date().toISOString(), message: 'Configuration not complete' });
@@ -63,17 +62,6 @@ router.get('/health/backups', (req, res) => {
   } catch (error) {
     recordError('backup_stats', req.path);
     res.status(500).json({ status: 'backup_stats_error', timestamp: new Date().toISOString(), error: error.message });
-  }
-});
-
-router.get('/health/database', async (req, res) => {
-  try {
-    const dbHealth = await dbHealthCheck();
-    const statusCode = dbHealth.status === 'healthy' ? 200 : 503;
-    res.status(statusCode).json({ status: 'database_health', timestamp: new Date().toISOString(), database: dbHealth });
-  } catch (error) {
-    recordError('database_health', req.path);
-    res.status(500).json({ status: 'database_health_error', timestamp: new Date().toISOString(), error: error.message });
   }
 });
 

@@ -10,7 +10,6 @@ import { logRequest } from './utils/logger.js';
 import { apiLimiter, submitLimiter } from './middleware/rateLimiter.js';
 import { metricsMiddleware } from './utils/metrics.js';
 import { scheduleBackups } from './utils/backup.js';
-import { initDatabase } from './utils/database.js';
 import healthRouter from './routes/health.js';
 import cacheRouter from './routes/cache.js';
 import createCalendarRouter from './routes/calendar.js';
@@ -43,13 +42,7 @@ app.use(apiLimiter);
 app.use(healthRouter);
 app.use(cacheRouter);
 
-// Database init (must run before calendar routes so dbInitialized is known)
-let dbInitialized = false;
-if (process.env.DB_PASSWORD) {
-  dbInitialized = await initDatabase();
-}
-
-app.use(createCalendarRouter({ dbInitialized }));
+app.use(createCalendarRouter());
 
 // Error handling (must be after routes)
 app.use(notFound);
@@ -71,12 +64,10 @@ if (process.env.NODE_ENV !== 'test') {
     const cert = fs.readFileSync(process.env.SSL_CERT_PATH || 'cert.pem');
     https.createServer({ key, cert }, app).listen(port, () => {
       console.info(`Servidor HTTPS iniciado en https://localhost:${port}`);
-      if (dbInitialized) console.info('Base de datos inicializada correctamente');
     });
   } else {
     app.listen(port, () => {
       console.info(`Servidor iniciado en http://localhost:${port}`);
-      if (dbInitialized) console.info('Base de datos inicializada correctamente');
     });
   }
 }

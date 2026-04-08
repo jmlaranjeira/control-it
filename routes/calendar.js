@@ -2,7 +2,6 @@ import { Router } from 'express';
 import { submitHoursRange, getRegisteredDays } from '../logic.js';
 import { catchAsync, validateDateRange } from '../middleware/errorHandler.js';
 import { get as cacheGet, set as cacheSet, del as cacheDel, cacheKeys } from '../utils/cache.js';
-import { auditLogs } from '../utils/database.js';
 
 // Returns a local YYYY-MM-DD string without UTC conversion
 function localDateStr(date) {
@@ -42,7 +41,7 @@ function computeStats(calendarData) {
   };
 }
 
-export default function createCalendarRouter({ dbInitialized }) {
+export default function createCalendarRouter() {
   const router = Router();
 
   router.get('/', catchAsync(async (req, res) => {
@@ -103,16 +102,6 @@ export default function createCalendarRouter({ dbInitialized }) {
     const { dryRun } = req.body;
     const { startISO, endISO } = req.validatedDates;
     const isDryRunActive = dryRun === 'on';
-
-    if (dbInitialized) {
-      await auditLogs.log('hours_submitted', {
-        startDate: startISO,
-        endDate: endISO,
-        dryRun: isDryRunActive,
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent'),
-      });
-    }
 
     const results = await submitHoursRange({ startDate: startISO, endDate: endISO, dryRun: isDryRunActive });
 
