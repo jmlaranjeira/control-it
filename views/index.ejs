@@ -37,6 +37,12 @@
           <button type="button" id="settings-btn" class="btn btn-ghost btn-sm" aria-label="Configuración de horario" title="Configuración de horario">
             <i class="fas fa-cog"></i>
           </button>
+          <% if (typeof currentUser !== 'undefined' && currentUser) { %>
+          <span class="current-user" title="<%= currentUser %>">
+            <i class="fas fa-user-circle"></i>
+            <span class="current-user__name"><%= currentUser %></span>
+          </span>
+          <% } %>
           <form method="POST" action="/logout" style="display:inline;">
             <button type="submit" class="btn btn-ghost btn-sm" aria-label="Cerrar sesión" title="Cerrar sesión">
               <i class="fas fa-sign-out-alt"></i>

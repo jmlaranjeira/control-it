@@ -321,7 +321,8 @@ body {
 }
 
 .form-group input[type="date"],
-.form-group input[type="text"] {
+.form-group input[type="text"],
+.form-group input[type="password"] {
   width: 100%;
   padding: 0.75rem 1rem;
   border: 2px solid var(--gray-300);
@@ -332,7 +333,8 @@ body {
 }
 
 .form-group input[type="date"]:focus,
-.form-group input[type="text"]:focus {
+.form-group input[type="text"]:focus,
+.form-group input[type="password"]:focus {
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
@@ -985,6 +987,33 @@ form.validated .form-group input[type="date"]:invalid {
   align-items: center;
   gap: 0.5rem;
   flex-shrink: 0;
+}
+
+/* ─── Current user badge ───────────────────────────────────────────── */
+
+.current-user {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--gray-600);
+  background: var(--gray-100);
+  border: 1px solid var(--gray-200);
+  border-radius: 2rem;
+  padding: 0.35rem 0.75rem;
+  max-width: 180px;
+}
+
+.current-user i {
+  color: var(--primary-color);
+  flex-shrink: 0;
+}
+
+.current-user__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ─── Settings Modal ───────────────────────────────────────────────── */

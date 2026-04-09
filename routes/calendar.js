@@ -101,6 +101,7 @@ export default function createCalendarRouter() {
       dryRun,
       stats,
       firstPending,
+      currentUser: credentials?.username ?? '',
     });
   }));
 
