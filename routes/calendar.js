@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { submitHoursRange, getRegisteredDays } from '../logic.js';
+import { submitHoursRange, getRegisteredDays, getLeaveDaysList, disableDay } from '../logic.js';
 import { catchAsync, validateDateRange } from '../middleware/errorHandler.js';
 import { get as cacheGet, set as cacheSet, del as cacheDel, cacheKeys } from '../utils/cache.js';
 
@@ -50,7 +50,11 @@ export default function createCalendarRouter() {
     const startISO = startDate.toISOString().slice(0, 10);
     const endISO = today.toISOString().slice(0, 10);
 
-    const registered = await getRegisteredDays(startISO, endISO);
+    const [registered, leaveDays] = await Promise.all([
+      getRegisteredDays(startISO, endISO),
+      getLeaveDaysList(),
+    ]);
+
     const calendarData = buildCalendarData(registered, startDate, today);
     const stats = computeStats(calendarData);
     const firstPending = calendarData.find(d => d.status === 'pending')?.date ?? '';
@@ -88,6 +92,7 @@ export default function createCalendarRouter() {
     res.render('index', {
       results: synthesizedResults,
       calendarData,
+      leaveDays,
       startDate: startPrefill,
       endDate: endPrefill,
       isLoading: false,
@@ -136,6 +141,28 @@ export default function createCalendarRouter() {
     } catch {}
 
     return res.json({ success: true, dryRun: isDryRun, results });
+  }));
+
+  // Undo a registered day — calls disable-event for all events of that date
+  router.post('/disable-day', catchAsync(async (req, res) => {
+    const { date } = req.body;
+
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ success: false, error: 'Fecha inválida' });
+    }
+
+    const result = await disableDay(date);
+
+    // Invalidate registered days cache so the calendar refreshes
+    try {
+      const today = new Date();
+      const yearStart = new Date(today.getFullYear(), 0, 1);
+      cacheDel(cacheKeys.registeredDays(date, date));
+      cacheDel(cacheKeys.registeredDays(yearStart.toISOString().slice(0, 10), today.toISOString().slice(0, 10)));
+      cacheDel(cacheKeys.vacationDaysDetailed());
+    } catch {}
+
+    return res.json({ success: result.disabled > 0, ...result });
   }));
 
   return router;

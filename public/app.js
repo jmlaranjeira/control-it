@@ -118,20 +118,106 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
   });
 
-  // --- Single-day click-to-register ---
+  // --- Single-day click-to-register + undo registered days ---
 
   const calendarContainer = document.querySelector('.calendar-container');
+  const undoTooltip       = document.getElementById('undo-tooltip');
+  const undoConfirmBtn    = document.getElementById('undo-confirm-btn');
+  const undoCancelBtn     = document.getElementById('undo-cancel-btn');
+  let   undoTargetDay     = null;
+
+  function hideUndoTooltip() {
+    if (undoTooltip) undoTooltip.hidden = true;
+    undoTargetDay = null;
+  }
+
+  function showUndoTooltip(dayEl) {
+    if (!undoTooltip) return;
+    undoTargetDay = dayEl;
+
+    // Position near the day cell
+    const rect = dayEl.getBoundingClientRect();
+    const tooltipW = 190;
+    let left = rect.left + window.scrollX + rect.width / 2 - tooltipW / 2;
+    let top  = rect.bottom + window.scrollY + 6;
+
+    // Keep within viewport
+    left = Math.max(8, Math.min(left, window.innerWidth - tooltipW - 8));
+
+    undoTooltip.style.left  = `${left}px`;
+    undoTooltip.style.top   = `${top}px`;
+    undoTooltip.hidden      = false;
+    undoConfirmBtn.focus();
+  }
+
+  if (undoCancelBtn) undoCancelBtn.addEventListener('click', hideUndoTooltip);
+
+  // Close tooltip when clicking outside
+  document.addEventListener('click', function (e) {
+    if (undoTooltip && !undoTooltip.hidden &&
+        !undoTooltip.contains(e.target) &&
+        !e.target.closest('.calendar-day.registered')) {
+      hideUndoTooltip();
+    }
+  });
+
+  if (undoConfirmBtn) {
+    undoConfirmBtn.addEventListener('click', async function () {
+      if (!undoTargetDay) return;
+      const dayEl = undoTargetDay;
+      const date  = dayEl.dataset.date;
+      hideUndoTooltip();
+
+      undoConfirmBtn.disabled = true;
+      clearAlerts();
+
+      try {
+        const body = new URLSearchParams();
+        body.set('date', date);
+
+        const response = await fetch('/disable-day', {
+          method : 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+          body   : body.toString(),
+        });
+
+        const json = await response.json().catch(() => ({}));
+
+        if (json.success) {
+          dayEl.classList.replace('registered', 'pending');
+          dayEl.dataset.status = 'pending';
+          showAlert(`Registro del ${date} eliminado correctamente`, 'success');
+        } else {
+          showAlert(json.error ?? 'No se pudo eliminar el registro', 'error');
+        }
+      } catch {
+        showAlert('Error al eliminar el registro', 'error');
+      } finally {
+        undoConfirmBtn.disabled = false;
+      }
+    });
+  }
 
   if (calendarContainer) {
     calendarContainer.addEventListener('click', async function (event) {
       const dayEl = event.target.closest('.calendar-day');
-      if (!dayEl || dayEl.dataset.status !== 'pending') return;
+      if (!dayEl) return;
 
-      const date = dayEl.dataset.date;
+      const status = dayEl.dataset.status;
+      const date   = dayEl.dataset.date;
       if (!date) return;
 
+      // Registered day → show undo tooltip
+      if (status === 'registered') {
+        showUndoTooltip(dayEl);
+        return;
+      }
+
+      // Pending day → register
+      if (status !== 'pending') return;
+
       startDateInput.value = date;
-      endDateInput.value = date;
+      endDateInput.value   = date;
 
       const body = new URLSearchParams();
       body.set('startDate', date);
@@ -141,9 +227,9 @@ document.addEventListener('DOMContentLoaded', async function () {
 
       try {
         const response = await fetch('/submit-day', {
-          method: 'POST',
+          method : 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-          body: body.toString(),
+          body   : body.toString(),
         });
 
         if (response.status === 200) {
@@ -155,7 +241,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             dayEl.dataset.status = 'simulated';
           }
         }
-      } catch (error) {
+      } catch {
         showAlert('Error al registrar el día', 'error');
       }
     });

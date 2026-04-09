@@ -4,3 +4,7 @@ coverage/
 .nyc_output/
 backups/
 logs/
+
+# API explorer output — may contain captured credentials/tokens
+docs/api-captured.json
+docs/api-reference.md
