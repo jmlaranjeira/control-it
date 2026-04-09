@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { submitHoursRange, getRegisteredDays, getLeaveDaysList, disableDay } from '../logic.js';
+import { submitHoursRange, getRegisteredDays, getLeaveDaysList, getVacationRequestsList, disableDay } from '../logic.js';
 import { catchAsync, validateDateRange } from '../middleware/errorHandler.js';
 import { get as cacheGet, set as cacheSet, del as cacheDel, cacheKeys } from '../utils/cache.js';
 
@@ -14,19 +14,30 @@ function localDateStr(date) {
 function buildCalendarData(registered, startDate, today) {
   const calendarData = [];
   const todayStr = localDateStr(today);
+  const endOfYear = new Date(today.getFullYear(), 11, 31);
+  const endStr = localDateStr(endOfYear);
   let cursor = new Date(startDate);
   cursor.setHours(12, 0, 0, 0); // noon to avoid UTC midnight timezone drift
-  while (localDateStr(cursor) <= todayStr) {
+  while (localDateStr(cursor) <= endStr) {
     const iso = localDateStr(cursor);
     const day = cursor.getDay(); // 0=Sun, 6=Sat
     const isWeekend = day === 0 || day === 6;
+    const isFuture = iso > todayStr;
     const find = registered.find(r => r.date === iso);
     const isHoliday = !isWeekend && !!find?.isHoliday;
-    calendarData.push({
-      date: iso,
-      status: isWeekend ? 'weekend' : (isHoliday ? 'holiday' : (find?.status || 'pending')),
-      isHoliday,
-    });
+    let status;
+    if (isWeekend) {
+      status = 'weekend';
+    } else if (isHoliday) {
+      status = 'holiday';
+    } else if (find?.status === 'vacation' || find?.status === 'vacation-pending' || find?.status === 'leave' || find?.status === 'leave-pending') {
+      status = find.status;
+    } else if (isFuture) {
+      status = 'future';
+    } else {
+      status = find?.status || 'pending';
+    }
+    calendarData.push({ date: iso, status, isHoliday });
     cursor.setDate(cursor.getDate() + 1);
   }
   return calendarData;
@@ -37,7 +48,7 @@ function computeStats(calendarData) {
     registered: calendarData.filter(d => d.status === 'registered').length,
     pending: calendarData.filter(d => d.status === 'pending').length,
     holiday: calendarData.filter(d => d.status === 'holiday').length,
-    vacation: calendarData.filter(d => d.status === 'vacation').length,
+    vacation: calendarData.filter(d => d.status === 'vacation' || d.status === 'vacation-pending').length,
   };
 }
 
@@ -48,12 +59,14 @@ export default function createCalendarRouter() {
     const today = new Date();
     const startDate = new Date(today.getFullYear(), 0, 1);
     const startISO = localDateStr(startDate);
-    const endISO = localDateStr(today);
+    const endOfYear = new Date(today.getFullYear(), 11, 31);
+    const endISO = localDateStr(endOfYear);
 
     const credentials = req.session.credentials;
-    const [registered, leaveDays] = await Promise.all([
+    const [registered, leaveDays, vacationRequests] = await Promise.all([
       getRegisteredDays(startISO, endISO, credentials),
       getLeaveDaysList(credentials),
+      getVacationRequestsList(credentials),
     ]);
 
     const calendarData = buildCalendarData(registered, startDate, today);
@@ -94,6 +107,7 @@ export default function createCalendarRouter() {
       results: synthesizedResults,
       calendarData,
       leaveDays,
+      vacationRequests,
       startDate: startPrefill,
       endDate: endPrefill,
       isLoading: false,

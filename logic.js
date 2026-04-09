@@ -109,14 +109,15 @@ async function fetchLeaveDays(token) {
 
   for (const leave of leaveDays) {
     if (!leave.Start || !leave.End) continue;
-    // Include both pending (State 1) and approved (State 3)
+    // State 1 = pending, State 3 = approved
     // Use date-only strings to avoid timezone shifts (e.g. Railway running in UTC)
     const startStr = leave.Start.split('T')[0];
     const endStr   = leave.End.split('T')[0];
+    const status   = leave.State === 3 ? 'leave' : 'leave-pending';
     let cursor     = DateTime.fromISO(startStr);
     const endDt    = DateTime.fromISO(endStr);
     while (cursor <= endDt) {
-      map[cursor.toISODate()] = 'leave';
+      map[cursor.toISODate()] = status;
       cursor = cursor.plus({ days: 1 });
     }
   }
@@ -124,7 +125,69 @@ async function fetchLeaveDays(token) {
   return { map, list: leaveDays };
 }
 
-// ─── Time-off map (combines calendar + leave days)
+// ─── Vacation data via /vacations/get-vacations-and-onduty-ranges-from-employee
+
+async function fetchVacationData(token) {
+  const response = await fetch(`${config.apiBaseUrl}/vacations/get-vacations-and-onduty-ranges-from-employee`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    logWarn('Failed to fetch vacation data', { status: response.status });
+    return { map: {}, ranges: [] };
+  }
+
+  const data = await response.json();
+  const entries = data?.VacationsAnOnDutyCalendarDays ?? [];
+  const map = {};
+
+  for (const entry of entries) {
+    if (!entry.Day) continue;
+    const iso = entry.Day.split('T')[0];
+
+    if (entry.IsHoliday) {
+      map[iso] = 'holiday';
+    } else if (entry.DayType === 1) {
+      // Vacation: State 3 = approved, State 1 = pending/requested
+      if (!map[iso] || map[iso] !== 'holiday') {
+        map[iso] = entry.State === 3 ? 'vacation' : 'vacation-pending';
+      }
+    }
+  }
+
+  // Build vacation request ranges for the panel (group consecutive days by state)
+  const vacationDays = entries
+    .filter(e => e.DayType === 1 && !e.IsHoliday && !e.IsLeaveDay)
+    .sort((a, b) => a.Day.localeCompare(b.Day));
+
+  const ranges = [];
+  let current = null;
+
+  for (const day of vacationDays) {
+    const iso = day.Day.split('T')[0];
+    const state = day.State;
+
+    if (current && current.state === state) {
+      // Check if consecutive (next day)
+      const prevDate = DateTime.fromISO(current.end);
+      const thisDate = DateTime.fromISO(iso);
+      const diff = thisDate.diff(prevDate, 'days').days;
+      if (diff <= 3) { // Allow weekends in between
+        current.end = iso;
+        continue;
+      }
+    }
+
+    // Start new range
+    if (current) ranges.push(current);
+    current = { start: iso, end: iso, state, year: day.YearOfApplication };
+  }
+  if (current) ranges.push(current);
+
+  return { map, ranges };
+}
+
+// ─── Time-off map (combines calendar + leave days + vacation data)
 
 export async function getTimeOffDaysDetailed(credentials) {
   const cacheKey = cacheKeys.vacationDaysDetailed();
@@ -138,17 +201,47 @@ export async function getTimeOffDaysDetailed(credentials) {
   const creds = getCreds(credentials);
   const token = await login(creds.username, creds.password);
 
-  const [calendarMap, { map: leaveMap }] = await Promise.all([
+  const [calendarMap, { map: leaveMap }, { map: vacationMap }] = await Promise.all([
     fetchCalendarDays(token, DateTime.now().year),
     fetchLeaveDays(token),
+    fetchVacationData(token),
   ]);
 
-  // Merge: leave days take priority over calendar entries
-  const map = { ...calendarMap, ...leaveMap };
+  // Merge: vacation data provides holidays + vacation statuses,
+  // calendar data fills gaps, leave days take highest priority
+  const map = { ...calendarMap, ...vacationMap, ...leaveMap };
 
   set(cacheKey, map, 3600);
   logInfo('Cached time-off days', { count: Object.keys(map).length });
   return map;
+}
+
+// ─── Vacation requests list (for the UI panel)
+
+export async function getVacationRequestsList(credentials) {
+  const cacheKey = 'vacation_requests_list';
+  const cached = get(cacheKey);
+  if (cached) {
+    logInfo('Serving vacation requests list from cache');
+    return cached;
+  }
+
+  logInfo('Fetching vacation requests list from API');
+  const creds = getCreds(credentials);
+  const token = await login(creds.username, creds.password);
+  const { ranges } = await fetchVacationData(token);
+
+  const result = ranges.map(r => ({
+    type: 'Vacaciones',
+    state: r.state === 3 ? 'Aprobada' : 'Solicitada',
+    stateCode: r.state,
+    start: r.start,
+    end: r.end,
+    year: r.year,
+  }));
+
+  set(cacheKey, result, 1800);
+  return result;
 }
 
 // ─── Leave days list (for the UI panel)
@@ -348,13 +441,19 @@ export async function getRegisteredDays(startDate, endDate, credentials) {
     const timeOffType = timeOffMap[isoDate];
     const isHoliday = timeOffType === 'holiday';
     const isVacation = timeOffType === 'vacation';
+    const isVacationPending = timeOffType === 'vacation-pending';
     const isLeave = timeOffType === 'leave';
+    const isLeavePending = timeOffType === 'leave-pending';
     const isRegistered = registeredFromReport.includes(isoDate);
-    calendarData.push({
-      date: isoDate,
-      status: isHoliday ? 'holiday' : (isVacation ? 'vacation' : (isLeave ? 'leave' : (isRegistered ? 'registered' : 'pending'))),
-      isHoliday: isHoliday
-    });
+    let status;
+    if (isHoliday) status = 'holiday';
+    else if (isVacation) status = 'vacation';
+    else if (isVacationPending) status = 'vacation-pending';
+    else if (isLeave) status = 'leave';
+    else if (isLeavePending) status = 'leave-pending';
+    else if (isRegistered) status = 'registered';
+    else status = 'pending';
+    calendarData.push({ date: isoDate, status, isHoliday });
 
     cursor = cursor.plus({ days: 1 });
   }

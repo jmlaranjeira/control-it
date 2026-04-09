@@ -1,0 +1,248 @@
+/* ─── Calendar Container ───────────────────────────────────────── */
+
+.calendar-container {
+  margin-top: 2rem;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.calendar-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--gray-900);
+}
+
+/* ─── Legend ────────────────────────────────────────────────────── */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--gray-700);
+  cursor: pointer;
+  user-select: none;
+}
+
+.legend-color {
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 3px;
+  border: 2px solid var(--gray-300);
+}
+
+.legend-color.registered { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: #16a34a; }
+.legend-color.pending    { background: linear-gradient(135deg, #fef2f2, #fecaca); border-color: #dc2626; }
+.legend-color.holiday    { background: linear-gradient(135deg, #fffbeb, #fde68a); border-color: #d97706; }
+.legend-color.vacation   { background: linear-gradient(135deg, #e0f2fe, #bae6fd); border-color: #0284c7; }
+.legend-color.vacation-pending { background: linear-gradient(135deg, #e0f2fe, #bae6fd); border-color: #0284c7; border-style: dashed; }
+.legend-color.leave      { background: linear-gradient(135deg, #f5f3ff, #ddd6fe); border-color: #7c3aed; }
+.legend-color.leave-pending { background: linear-gradient(135deg, #faf5ff, #ede9fe); border-color: #a78bfa; border-style: dashed; }
+.legend-color.simulated  { background: linear-gradient(135deg, #fefce8, #fde047); border-color: #ca8a04; }
+
+.legend-item[aria-pressed="false"] { opacity: 0.5; }
+.legend-item[aria-pressed="true"]  { opacity: 1; }
+
+/* ─── Months Grid (year overview) ──────────────────────────────── */
+
+.months-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+.month-section {
+  min-width: 0; /* prevent grid blowout */
+}
+
+.month-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gray-800);
+  margin-bottom: 0.4rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 2px solid var(--gray-200);
+}
+
+/* ─── Weekday Headers ──────────────────────────────────────────── */
+
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: 2px;
+}
+
+.calendar-weekday-header {
+  text-align: center;
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--gray-400);
+  padding: 0.15rem 0;
+}
+
+/* ─── Calendar Grid ────────────────────────────────────────────── */
+
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.65rem;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  position: relative;
+  background: white;
+}
+
+.calendar-day:hover {
+  transform: scale(1.15);
+  box-shadow: var(--shadow);
+  z-index: 10;
+}
+
+.calendar-day:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 1px;
+}
+
+/* ─── Day Status Colors ────────────────────────────────────────── */
+
+.calendar-day.registered {
+  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+  border-color: #16a34a;
+  color: #166534;
+  cursor: pointer;
+}
+
+.calendar-day.registered:hover {
+  filter: brightness(0.88);
+}
+
+.calendar-day.pending {
+  background: linear-gradient(135deg, #fef2f2, #fecaca);
+  border-color: #dc2626;
+  color: #991b1b;
+}
+
+.calendar-day.holiday {
+  background: linear-gradient(135deg, #fffbeb, #fde68a);
+  border-color: #d97706;
+  color: #92400e;
+}
+
+.calendar-day.vacation {
+  background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+  border-color: #0284c7;
+  color: #075985;
+}
+
+.calendar-day.vacation-pending {
+  background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+  border-color: #0284c7;
+  border-style: dashed;
+  color: #075985;
+}
+
+.calendar-day.leave {
+  background: linear-gradient(135deg, #f5f3ff, #ddd6fe);
+  border-color: #7c3aed;
+  color: #5b21b6;
+}
+
+.calendar-day.leave-pending {
+  background: linear-gradient(135deg, #faf5ff, #ede9fe);
+  border-color: #a78bfa;
+  border-style: dashed;
+  color: #7c3aed;
+}
+
+.calendar-day.simulated {
+  background: linear-gradient(135deg, #fefce8, #fde047);
+  border-color: #ca8a04;
+  color: #a16207;
+  position: relative;
+}
+
+.calendar-day.simulated::after {
+  content: '⚡';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  font-size: 0.5rem;
+}
+
+.calendar-day.today {
+  box-shadow: 0 0 0 2px var(--primary-color);
+}
+
+.calendar-day.weekend {
+  background: var(--gray-50);
+  color: var(--gray-400);
+  border-color: var(--gray-200);
+  cursor: default;
+}
+
+.calendar-day.future {
+  background: var(--gray-50);
+  color: var(--gray-300);
+  border-color: var(--gray-100);
+  cursor: default;
+}
+
+.calendar-day--empty {
+  background: transparent;
+  border: none;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* ─── Responsive ───────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .months-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 540px) {
+  .months-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .calendar-day {
+    font-size: 0.6rem;
+  }
+}
+
+@media (prefers-contrast: high) {
+  .calendar-day {
+    border-width: 2px;
+  }
+}

@@ -159,6 +159,7 @@ export const cacheKeys = {
   vacationDaysDetailed: () => 'vacation_days_detailed',
   calendarDays: (year) => `calendar_days_${year}`,
   leaveDays: () => 'leave_days_all',
+  vacationRequests: () => 'vacation_requests_list',
 
   // Generate cache key for API responses
   apiResponse: (method, url, params = {}) => {

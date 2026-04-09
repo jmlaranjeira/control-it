@@ -7,7 +7,10 @@
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/calendar.css">
+  <link rel="stylesheet" href="/css/panels.css">
 </head>
 <body>
   <div class="container">
@@ -323,22 +326,46 @@
       <% } %>
     </div>
 
-    <!-- Leave Days Panel -->
-    <% if (leaveDays && leaveDays.length > 0) { %>
+    <!-- Leave Days & Vacation Requests Panel -->
     <%
-      const today_iso = new Date().toISOString().split('T')[0];
-      const upcomingLeave = leaveDays.filter(l => !l.end || l.end >= today_iso);
-      const pastLeave     = leaveDays.filter(l => l.end && l.end < today_iso);
+      const _hasLeave = leaveDays && leaveDays.length > 0;
+      const _hasVacation = typeof vacationRequests !== 'undefined' && vacationRequests && vacationRequests.length > 0;
+    %>
+    <% if (_hasLeave || _hasVacation) { %>
+    <%
+      const _td = new Date();
+      const today_iso = `${_td.getFullYear()}-${String(_td.getMonth()+1).padStart(2,'0')}-${String(_td.getDate()).padStart(2,'0')}`;
+      const _leave = leaveDays || [];
+      const upcomingLeave = _leave.filter(l => !l.end || l.end >= today_iso);
+      const pastLeave     = _leave.filter(l => l.end && l.end < today_iso);
+      const _vac = (typeof vacationRequests !== 'undefined' && vacationRequests) || [];
+      const upcomingVacation = _vac.filter(v => !v.end || v.end >= today_iso);
+      const pastVacation     = _vac.filter(v => v.end && v.end < today_iso);
+      const totalUpcoming = upcomingLeave.length + upcomingVacation.length;
     %>
     <div class="card leave-days-panel">
       <div class="card-header">
         <i class="fas fa-umbrella-beach"></i>
-        <h2>Permisos y Ausencias</h2>
-        <% if (upcomingLeave.length > 0) { %>
-        <span class="leave-badge"><%= upcomingLeave.length %> activo<%= upcomingLeave.length !== 1 ? 's' : '' %></span>
+        <h2>Permisos, Vacaciones y Ausencias</h2>
+        <% if (totalUpcoming > 0) { %>
+        <span class="leave-badge"><%= totalUpcoming %> activo<%= totalUpcoming !== 1 ? 's' : '' %></span>
         <% } %>
       </div>
       <div class="leave-days-list">
+        <% upcomingVacation.forEach(function(v) { %>
+        <div class="leave-day-item leave-day-item--<%= v.stateCode === 3 ? 'vacation-approved' : 'vacation-pending' %>">
+          <div class="leave-day-icon">
+            <i class="fas fa-<%= v.stateCode === 3 ? 'plane' : 'hourglass-half' %>"></i>
+          </div>
+          <div class="leave-day-info">
+            <span class="leave-day-type"><%= v.type %></span>
+            <span class="leave-day-dates">
+              <%= v.start %><% if (v.end && v.end !== v.start) { %> → <%= v.end %><% } %>
+            </span>
+          </div>
+          <span class="leave-day-state"><%= v.state %></span>
+        </div>
+        <% }); %>
         <% upcomingLeave.forEach(function(l) { %>
         <div class="leave-day-item leave-day-item--<%= l.stateCode === 3 ? 'approved' : 'pending' %>">
           <div class="leave-day-icon">
@@ -353,9 +380,21 @@
           <span class="leave-day-state"><%= l.state %></span>
         </div>
         <% }); %>
-        <% if (pastLeave.length > 0) { %>
+        <% if (pastVacation.length > 0 || pastLeave.length > 0) { %>
         <details class="leave-days-past">
-          <summary>Ver <%= pastLeave.length %> permiso<%= pastLeave.length !== 1 ? 's' : '' %> pasado<%= pastLeave.length !== 1 ? 's' : '' %></summary>
+          <summary>Ver <%= pastVacation.length + pastLeave.length %> registro<%= (pastVacation.length + pastLeave.length) !== 1 ? 's' : '' %> pasado<%= (pastVacation.length + pastLeave.length) !== 1 ? 's' : '' %></summary>
+          <% pastVacation.forEach(function(v) { %>
+          <div class="leave-day-item leave-day-item--past">
+            <div class="leave-day-icon"><i class="fas fa-plane"></i></div>
+            <div class="leave-day-info">
+              <span class="leave-day-type"><%= v.type %></span>
+              <span class="leave-day-dates">
+                <%= v.start %><% if (v.end && v.end !== v.start) { %> → <%= v.end %><% } %>
+              </span>
+            </div>
+            <span class="leave-day-state"><%= v.state %></span>
+          </div>
+          <% }); %>
           <% pastLeave.forEach(function(l) { %>
           <div class="leave-day-item leave-day-item--past">
             <div class="leave-day-icon"><i class="fas fa-history"></i></div>
@@ -383,7 +422,7 @@
       </div>
 
       <div class="calendar-header">
-        <div class="calendar-title">Vista Mensual</div>
+        <div class="calendar-title">Vista Anual</div>
         <div class="legend" aria-label="Leyenda y filtros de calendario">
           <div class="legend-item" role="button" tabindex="0" data-status="registered" aria-pressed="true">
             <div class="legend-color registered" aria-hidden="true"></div>
@@ -401,9 +440,17 @@
             <div class="legend-color vacation" aria-hidden="true"></div>
             <span>Vacaciones</span>
           </div>
+          <div class="legend-item" role="button" tabindex="0" data-status="vacation-pending" aria-pressed="true">
+            <div class="legend-color vacation-pending" aria-hidden="true"></div>
+            <span>Vacaciones solicitadas</span>
+          </div>
           <div class="legend-item" role="button" tabindex="0" data-status="leave" aria-pressed="true">
             <div class="legend-color leave" aria-hidden="true"></div>
             <span>Permiso</span>
+          </div>
+          <div class="legend-item" role="button" tabindex="0" data-status="leave-pending" aria-pressed="true">
+            <div class="legend-color leave-pending" aria-hidden="true"></div>
+            <span>Permiso pendiente</span>
           </div>
           <div class="legend-item" role="button" tabindex="0" data-status="simulated" aria-pressed="true">
             <div class="legend-color simulated" aria-hidden="true"></div>
@@ -430,6 +477,7 @@
         const today = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')}`;
       %>
 
+      <div class="months-grid">
       <% Object.keys(groupedByMonth).sort().forEach(monthKey => {
            const [year, month] = monthKey.split('-');
            const monthLabel = monthNames[month] + ' ' + year;
@@ -462,10 +510,13 @@
                  const statusText =
                    day.status === 'holiday' ? 'Día festivo' :
                    day.status === 'vacation' ? 'Vacaciones' :
+                   day.status === 'vacation-pending' ? 'Vacaciones solicitadas' :
                    day.status === 'leave' ? 'Permiso' :
+                   day.status === 'leave-pending' ? 'Permiso pendiente' :
                    day.status === 'registered' ? 'Horas registradas' :
                    day.status === 'pending' ? 'Horas pendientes' :
                    day.status === 'weekend' ? 'Fin de semana' :
+                   day.status === 'future' ? '' :
                    'Sin registro';
                  const ariaLabel = `${dayNumber} de ${monthLabel}: ${statusText}${isDryRun ? ' (Simulado)' : ''}`;
             %>
@@ -484,6 +535,7 @@
           </div>
         </div>
       <% }) %>
+      </div>
     </div>
     <% } %>
   </div>

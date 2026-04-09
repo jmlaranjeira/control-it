@@ -266,15 +266,17 @@ document.addEventListener('DOMContentLoaded', async function () {
   // --- Legend filters ---
 
   const legendItems = Array.from(document.querySelectorAll('.legend .legend-item'));
-  const defaultStatuses = ['registered', 'pending', 'holiday', 'vacation', 'leave', 'simulated'];
+  const defaultStatuses = ['registered', 'pending', 'holiday', 'vacation', 'vacation-pending', 'leave', 'leave-pending', 'simulated'];
   const stored = (() => { try { return JSON.parse(localStorage.getItem('calendarFilters') || '[]'); } catch { return []; } })();
   const activeStatuses = new Set(Array.isArray(stored) && stored.length ? stored : defaultStatuses);
+  // Auto-enable new statuses that didn't exist when filters were saved
+  for (const s of defaultStatuses) { if (!stored.includes(s)) activeStatuses.add(s); }
 
   function applyCalendarFilters() {
     document.querySelectorAll('.calendar-day').forEach(day => {
       // Weekend and empty cells are structural grid elements — never hide them
       // (hiding them with display:none removes them from the CSS grid and breaks alignment)
-      if (day.classList.contains('weekend') || day.classList.contains('calendar-day--empty')) return;
+      if (day.classList.contains('weekend') || day.classList.contains('future') || day.classList.contains('calendar-day--empty')) return;
       const visible = Array.from(activeStatuses).some(s => day.classList.contains(s));
       day.style.visibility = visible ? '' : 'hidden';
     });
