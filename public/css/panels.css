@@ -1,5 +1,33 @@
 /* ─── Leave Days Panel ─────────────────────────────────────────── */
 
+details.leave-days-panel {
+  /* Remove default marker */
+}
+
+details.leave-days-panel > summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+details.leave-days-panel > summary::-webkit-details-marker { display: none; }
+details.leave-days-panel > summary::marker { display: none; content: ''; }
+
+.card-header--toggle {
+  position: relative;
+}
+
+.card-header__chevron {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--gray-400);
+  transition: transform 0.2s ease;
+}
+
+details.leave-days-panel[open] .card-header__chevron {
+  transform: rotate(180deg);
+}
+
 .leave-days-panel .card-header {
   position: relative;
 }

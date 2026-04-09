@@ -343,14 +343,15 @@
       const pastVacation     = _vac.filter(v => v.end && v.end < today_iso);
       const totalUpcoming = upcomingLeave.length + upcomingVacation.length;
     %>
-    <div class="card leave-days-panel">
-      <div class="card-header">
+    <details class="card leave-days-panel">
+      <summary class="card-header card-header--toggle">
         <i class="fas fa-umbrella-beach"></i>
         <h2>Permisos, Vacaciones y Ausencias</h2>
         <% if (totalUpcoming > 0) { %>
         <span class="leave-badge"><%= totalUpcoming %> activo<%= totalUpcoming !== 1 ? 's' : '' %></span>
         <% } %>
-      </div>
+        <i class="fas fa-chevron-down card-header__chevron"></i>
+      </summary>
       <div class="leave-days-list">
         <% upcomingVacation.forEach(function(v) { %>
         <div class="leave-day-item leave-day-item--<%= v.stateCode === 3 ? 'vacation-approved' : 'vacation-pending' %>">
@@ -410,7 +411,7 @@
         </details>
         <% } %>
       </div>
-    </div>
+    </details>
     <% } %>
 
     <!-- Calendar Section -->
