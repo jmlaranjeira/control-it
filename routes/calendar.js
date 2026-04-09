@@ -47,8 +47,8 @@ export default function createCalendarRouter() {
   router.get('/', catchAsync(async (req, res) => {
     const today = new Date();
     const startDate = new Date(today.getFullYear(), 0, 1);
-    const startISO = startDate.toISOString().slice(0, 10);
-    const endISO = today.toISOString().slice(0, 10);
+    const startISO = localDateStr(startDate);
+    const endISO = localDateStr(today);
 
     const credentials = req.session.credentials;
     const [registered, leaveDays] = await Promise.all([
@@ -114,8 +114,8 @@ export default function createCalendarRouter() {
 
     const today = new Date();
     const yearStart = new Date(today.getFullYear(), 0, 1);
-    const calendarStartISO = yearStart.toISOString().slice(0, 10);
-    const calendarEndISO = today.toISOString().slice(0, 10);
+    const calendarStartISO = localDateStr(yearStart);
+    const calendarEndISO = localDateStr(today);
 
     try {
       cacheDel(cacheKeys.registeredDays(startISO, endISO));
@@ -139,7 +139,7 @@ export default function createCalendarRouter() {
       const today = new Date();
       const yearStart = new Date(today.getFullYear(), 0, 1);
       cacheDel(cacheKeys.registeredDays(startISO, endISO));
-      cacheDel(cacheKeys.registeredDays(yearStart.toISOString().slice(0, 10), today.toISOString().slice(0, 10)));
+      cacheDel(cacheKeys.registeredDays(localDateStr(yearStart), localDateStr(today)));
     } catch {}
 
     return res.json({ success: true, dryRun: isDryRun, results });
@@ -160,7 +160,7 @@ export default function createCalendarRouter() {
       const today = new Date();
       const yearStart = new Date(today.getFullYear(), 0, 1);
       cacheDel(cacheKeys.registeredDays(date, date));
-      cacheDel(cacheKeys.registeredDays(yearStart.toISOString().slice(0, 10), today.toISOString().slice(0, 10)));
+      cacheDel(cacheKeys.registeredDays(localDateStr(yearStart), localDateStr(today)));
       cacheDel(cacheKeys.vacationDaysDetailed());
     } catch {}
 

@@ -426,7 +426,8 @@
           "09": "Septiembre", "10": "Octubre", "11": "Noviembre", "12": "Diciembre"
         };
 
-        const today = new Date().toISOString().split('T')[0];
+        const _now = new Date();
+        const today = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')}`;
       %>
 
       <% Object.keys(groupedByMonth).sort().forEach(monthKey => {
@@ -442,7 +443,8 @@
           </div>
           <div class="calendar" role="grid" aria-label="Calendario de <%= monthLabel %>">
             <%
-              const firstDayOfMonth = new Date(monthKey + '-01');
+              const [fy, fm] = monthKey.split('-').map(Number);
+              const firstDayOfMonth = new Date(fy, fm - 1, 1); // local date, avoids UTC parsing
               const offset = (firstDayOfMonth.getDay() + 6) % 7; // Mon=0, ..., Sun=6
               for (let i = 0; i < offset; i++) { %>
               <div class="calendar-day calendar-day--empty" aria-hidden="true"></div>

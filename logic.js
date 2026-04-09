@@ -110,10 +110,12 @@ async function fetchLeaveDays(token) {
   for (const leave of leaveDays) {
     if (!leave.Start || !leave.End) continue;
     // Include both pending (State 1) and approved (State 3)
-    const start = DateTime.fromISO(leave.Start);
-    const end   = DateTime.fromISO(leave.End);
-    let cursor  = start.startOf('day');
-    while (cursor <= end.startOf('day')) {
+    // Use date-only strings to avoid timezone shifts (e.g. Railway running in UTC)
+    const startStr = leave.Start.split('T')[0];
+    const endStr   = leave.End.split('T')[0];
+    let cursor     = DateTime.fromISO(startStr);
+    const endDt    = DateTime.fromISO(endStr);
+    while (cursor <= endDt) {
       map[cursor.toISODate()] = 'leave';
       cursor = cursor.plus({ days: 1 });
     }

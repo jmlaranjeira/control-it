@@ -276,7 +276,7 @@ document.addEventListener('DOMContentLoaded', async function () {
       // (hiding them with display:none removes them from the CSS grid and breaks alignment)
       if (day.classList.contains('weekend') || day.classList.contains('calendar-day--empty')) return;
       const visible = Array.from(activeStatuses).some(s => day.classList.contains(s));
-      day.style.display = visible ? '' : 'none';
+      day.style.visibility = visible ? '' : 'hidden';
     });
   }
 
