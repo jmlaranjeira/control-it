@@ -22,7 +22,7 @@ router.get('/health/live', (req, res) => {
 router.get('/health/ready', async (req, res) => {
   try {
     const config = await import('../config.js');
-    if (config.default.username && config.default.password) {
+    if (config.default.apiBaseUrl) {
       res.status(200).json({
         status: 'ready',
         timestamp: new Date().toISOString(),

@@ -5,18 +5,11 @@ import FormData from 'form-data';
 import * as cheerio from 'cheerio';
 import { get, set, cacheKeys } from './utils/cache.js';
 import { logInfo, logWarn } from './utils/logger.js';
+import { getScheduleConfig } from './utils/scheduleConfig.js';
 
-const currentYear = DateTime.now().year;
-const summerStart = DateTime.fromObject({
-  day: config.summerStartDay,
-  month: config.summerStartMonth,
-  year: currentYear
-});
-const summerEnd = DateTime.fromObject({
-  day: config.summerEndDay,
-  month: config.summerEndMonth,
-  year: currentYear
-});
+function getCreds(credentials) {
+  return credentials || { username: config.username, password: config.password };
+}
 
 function formatDate(date) {
   return date.toFormat("yyyy-MM-dd'T'HH':'mm':'ssZZ");
@@ -35,6 +28,11 @@ async function login(username, password) {
 
   const data = await response.json();
   return data.User.AccessToken;
+}
+
+// Exported for use by auth route to validate credentials
+export async function loginUser(username, password) {
+  return login(username, password);
 }
 
 function buildHeaders(token) {
@@ -126,7 +124,7 @@ async function fetchLeaveDays(token) {
 
 // ─── Time-off map (combines calendar + leave days)
 
-export async function getTimeOffDaysDetailed() {
+export async function getTimeOffDaysDetailed(credentials) {
   const cacheKey = cacheKeys.vacationDaysDetailed();
   const cached = get(cacheKey);
   if (cached) {
@@ -135,7 +133,8 @@ export async function getTimeOffDaysDetailed() {
   }
 
   logInfo('Fetching time-off days from API');
-  const token = await login(config.username, config.password);
+  const creds = getCreds(credentials);
+  const token = await login(creds.username, creds.password);
 
   const [calendarMap, { map: leaveMap }] = await Promise.all([
     fetchCalendarDays(token, DateTime.now().year),
@@ -152,7 +151,7 @@ export async function getTimeOffDaysDetailed() {
 
 // ─── Leave days list (for the UI panel)
 
-export async function getLeaveDaysList() {
+export async function getLeaveDaysList(credentials) {
   const cacheKey = cacheKeys.leaveDays();
   const cached = get(cacheKey);
   if (cached) {
@@ -161,7 +160,8 @@ export async function getLeaveDaysList() {
   }
 
   logInfo('Fetching leave days list from API');
-  const token = await login(config.username, config.password);
+  const creds = getCreds(credentials);
+  const token = await login(creds.username, creds.password);
   const { list } = await fetchLeaveDays(token);
 
   // Sort by start date ascending, keep only relevant fields
@@ -183,8 +183,9 @@ export async function getLeaveDaysList() {
 
 // ─── Disable (undo) a registered day
 
-export async function disableDay(date) {
-  const token = await login(config.username, config.password);
+export async function disableDay(date, credentials) {
+  const creds = getCreds(credentials);
+  const token = await login(creds.username, creds.password);
   const formattedDate = DateTime.fromISO(date).toFormat('dd-MM-yyyy');
 
   // Fetch events registered for this day
@@ -240,13 +241,26 @@ export async function disableDay(date) {
 
 // ─── Submit hours range
 
-export async function submitHoursRange({ startDate, endDate, dryRun = true }) {
+export async function submitHoursRange({ startDate, endDate, dryRun = true, credentials }) {
+  const scheduleConfig = getScheduleConfig();
+  const currentYear = DateTime.now().year;
+  const summerStart = DateTime.fromObject({
+    day:   scheduleConfig.summerStartDay,
+    month: scheduleConfig.summerStartMonth,
+    year:  currentYear,
+  });
+  const summerEnd = DateTime.fromObject({
+    day:   scheduleConfig.summerEndDay,
+    month: scheduleConfig.summerEndMonth,
+    year:  currentYear,
+  });
+
   const start = DateTime.fromISO(startDate);
   const end = DateTime.fromISO(endDate);
   const days = [];
   let cursor = start;
 
-  const timeOffMap = await getTimeOffDaysDetailed();
+  const timeOffMap = await getTimeOffDaysDetailed(credentials);
 
   while (cursor <= end) {
     const isoDate = cursor.toISODate();
@@ -264,7 +278,8 @@ export async function submitHoursRange({ startDate, endDate, dryRun = true }) {
 
   let accessToken = null;
   if (!dryRun) {
-    accessToken = await login(config.username, config.password);
+    const creds = getCreds(credentials);
+    accessToken = await login(creds.username, creds.password);
   }
 
   const results = [];
@@ -277,16 +292,16 @@ export async function submitHoursRange({ startDate, endDate, dryRun = true }) {
     let workStartRaw, workEnd, lunchStart, lunchEnd;
 
     if (isShortDay) {
-      const t = config.workSchedule.summer.start;
+      const t = scheduleConfig.workSchedule.summer.start;
       workStartRaw = day.set({ hour: t.hour, minute: t.minute + randomJitter() });
-      workEnd = workStartRaw.plus(config.workSchedule.summer.length);
+      workEnd = workStartRaw.plus(scheduleConfig.workSchedule.summer.length);
     } else {
-      const t = config.workSchedule.winter.start;
-      const lunch = config.workSchedule.lunch.start;
+      const t = scheduleConfig.workSchedule.winter.start;
+      const lunch = scheduleConfig.workSchedule.lunch.start;
       workStartRaw = day.set({ hour: t.hour, minute: t.minute + randomJitter() });
-      workEnd = workStartRaw.plus(config.workSchedule.winter.length).plus(config.workSchedule.lunch.length);
+      workEnd = workStartRaw.plus(scheduleConfig.workSchedule.winter.length).plus(scheduleConfig.workSchedule.lunch.length);
       lunchStart = day.set({ hour: lunch.hour, minute: lunch.minute + randomJitter() });
-      lunchEnd = lunchStart.plus(config.workSchedule.lunch.length);
+      lunchEnd = lunchStart.plus(scheduleConfig.workSchedule.lunch.length);
     }
 
     const workStart = formatDate(workStartRaw);
@@ -316,10 +331,10 @@ function randomJitter() {
   return Math.round(Math.random() * config.jitterMinutes);
 }
 
-export async function getRegisteredDays(startDate, endDate) {
+export async function getRegisteredDays(startDate, endDate, credentials) {
   const [timeOffMap, registeredFromReport] = await Promise.all([
-    getTimeOffDaysDetailed(),
-    getRegisteredDaysFromReport(startDate, endDate)
+    getTimeOffDaysDetailed(credentials),
+    getRegisteredDaysFromReport(startDate, endDate, credentials)
   ]);
   const start = DateTime.fromISO(startDate);
   const end = DateTime.fromISO(endDate);
@@ -344,11 +359,12 @@ export async function getRegisteredDays(startDate, endDate) {
   return calendarData;
 }
 
-export async function getDetailedEventsByRange(startDate, endDate) {
-  const registeredDays = await getRegisteredDaysFromReport(startDate, endDate);
+export async function getDetailedEventsByRange(startDate, endDate, credentials) {
+  const registeredDays = await getRegisteredDaysFromReport(startDate, endDate, credentials);
   const results = [];
 
-  const token = await login(config.username, config.password);
+  const creds = getCreds(credentials);
+  const token = await login(creds.username, creds.password);
 
   for (const date of registeredDays) {
     const formattedDate = DateTime.fromISO(date).toFormat('dd-MM-yyyy');
@@ -370,13 +386,13 @@ export async function getDetailedEventsByRange(startDate, endDate) {
   return results;
 }
 
-export async function getVacationDays() {
+export async function getVacationDays(credentials) {
   // Backward compatibility: return array of all time-off days
-  const detailed = await getTimeOffDaysDetailed();
+  const detailed = await getTimeOffDaysDetailed(credentials);
   return Object.keys(detailed);
 }
 
-export async function getRegisteredDaysFromReport(startDate, endDate) {
+export async function getRegisteredDaysFromReport(startDate, endDate, credentials) {
   const cacheKey = cacheKeys.registeredDays(startDate, endDate);
 
   const cachedData = get(cacheKey);
@@ -386,7 +402,8 @@ export async function getRegisteredDaysFromReport(startDate, endDate) {
   }
 
   logInfo('Fetching registered days from API', { startDate, endDate });
-  const token = await login(config.username, config.password);
+  const creds = getCreds(credentials);
+  const token = await login(creds.username, creds.password);
   const formData = new FormData();
   formData.append('startDate', DateTime.fromISO(startDate).toFormat('dd-MM-yyyy'));
   formData.append('endDate', DateTime.fromISO(endDate).toFormat('dd-MM-yyyy'));

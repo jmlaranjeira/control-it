@@ -318,4 +318,165 @@ document.addEventListener('DOMContentLoaded', async function () {
       if (next >= 0 && next < days.length) days[next].focus();
     }
   });
+
+  // --- 401 redirect helper ---
+
+  function guardedFetch(url, options) {
+    return fetch(url, options).then(res => {
+      if (res.status === 401) { window.location.href = '/login'; }
+      return res;
+    });
+  }
+
+  // Patch existing fetch calls to use guardedFetch — replace references on calendarContainer
+  // and undoConfirmBtn by overriding window.fetch for internal calls.
+  // (Simpler: just patch window.fetch for same-origin calls)
+  const _origFetch = window.fetch;
+  window.fetch = function (input, init) {
+    const url = typeof input === 'string' ? input : input?.url;
+    if (url && !url.startsWith('http')) {
+      return _origFetch(input, init).then(res => {
+        if (res.status === 401) { window.location.href = '/login'; }
+        return res;
+      });
+    }
+    return _origFetch(input, init);
+  };
+
+  // --- Settings modal ---
+
+  const settingsBtn      = document.getElementById('settings-btn');
+  const settingsOverlay  = document.getElementById('settings-overlay');
+  const settingsCloseBtn = document.getElementById('settings-close-btn');
+  const settingsCancelBtn= document.getElementById('settings-cancel-btn');
+  const settingsSaveBtn  = document.getElementById('settings-save-btn');
+  const settingsResetBtn = document.getElementById('settings-reset-btn');
+  const settingsAlert    = document.getElementById('settings-alert');
+
+  function showSettingsAlert(msg, type = 'error') {
+    if (!settingsAlert) return;
+    settingsAlert.innerHTML = `<div class="alert alert-${type}" style="margin-bottom:1rem;"><i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i><div>${msg}</div></div>`;
+    setTimeout(() => { settingsAlert.innerHTML = ''; }, 4000);
+  }
+
+  function populateForm(cfg) {
+    const s = id => document.getElementById(id);
+    s('s-winter-start-hour').value    = cfg.workSchedule.winter.start.hour;
+    s('s-winter-start-minute').value  = cfg.workSchedule.winter.start.minute;
+    s('s-winter-length-hours').value  = cfg.workSchedule.winter.length.hours;
+    s('s-winter-length-minutes').value= cfg.workSchedule.winter.length.minutes;
+    s('s-lunch-start-hour').value     = cfg.workSchedule.lunch.start.hour;
+    s('s-lunch-start-minute').value   = cfg.workSchedule.lunch.start.minute;
+    s('s-lunch-length-hours').value   = cfg.workSchedule.lunch.length.hours;
+    s('s-lunch-length-minutes').value = cfg.workSchedule.lunch.length.minutes;
+    s('s-summer-start-hour').value    = cfg.workSchedule.summer.start.hour;
+    s('s-summer-start-minute').value  = cfg.workSchedule.summer.start.minute;
+    s('s-summer-length-hours').value  = cfg.workSchedule.summer.length.hours;
+    s('s-summer-length-minutes').value= cfg.workSchedule.summer.length.minutes;
+    s('s-summer-start-day').value     = cfg.summerStartDay;
+    s('s-summer-start-month').value   = cfg.summerStartMonth;
+    s('s-summer-end-day').value       = cfg.summerEndDay;
+    s('s-summer-end-month').value     = cfg.summerEndMonth;
+  }
+
+  function collectForm() {
+    const g = id => parseInt(document.getElementById(id).value, 10);
+    return {
+      workSchedule: {
+        winter: {
+          start:  { hour: g('s-winter-start-hour'),  minute: g('s-winter-start-minute') },
+          length: { hours: g('s-winter-length-hours'), minutes: g('s-winter-length-minutes') },
+        },
+        lunch: {
+          start:  { hour: g('s-lunch-start-hour'),   minute: g('s-lunch-start-minute') },
+          length: { hours: g('s-lunch-length-hours'),  minutes: g('s-lunch-length-minutes') },
+        },
+        summer: {
+          start:  { hour: g('s-summer-start-hour'),  minute: g('s-summer-start-minute') },
+          length: { hours: g('s-summer-length-hours'), minutes: g('s-summer-length-minutes') },
+        },
+      },
+      summerStartDay:   g('s-summer-start-day'),
+      summerStartMonth: g('s-summer-start-month'),
+      summerEndDay:     g('s-summer-end-day'),
+      summerEndMonth:   g('s-summer-end-month'),
+    };
+  }
+
+  async function openSettings() {
+    if (!settingsOverlay) return;
+    settingsOverlay.hidden = false;
+    try {
+      const res = await fetch('/api/schedule-config');
+      const json = await res.json();
+      if (json.success) populateForm(json.config);
+    } catch {
+      showSettingsAlert('No se pudo cargar la configuración');
+    }
+  }
+
+  function closeSettings() {
+    if (settingsOverlay) settingsOverlay.hidden = true;
+    if (settingsAlert) settingsAlert.innerHTML = '';
+  }
+
+  if (settingsBtn)       settingsBtn.addEventListener('click', openSettings);
+  if (settingsCloseBtn)  settingsCloseBtn.addEventListener('click', closeSettings);
+  if (settingsCancelBtn) settingsCancelBtn.addEventListener('click', closeSettings);
+
+  if (settingsOverlay) {
+    settingsOverlay.addEventListener('click', function (e) {
+      if (e.target === settingsOverlay) closeSettings();
+    });
+  }
+
+  if (settingsSaveBtn) {
+    settingsSaveBtn.addEventListener('click', async function () {
+      settingsSaveBtn.disabled = true;
+      try {
+        const body = collectForm();
+        const res = await fetch('/api/schedule-config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const json = await res.json();
+        if (json.success) {
+          showSettingsAlert('Configuración guardada correctamente', 'success');
+          setTimeout(closeSettings, 1200);
+        } else {
+          showSettingsAlert(json.error || 'Error al guardar');
+        }
+      } catch {
+        showSettingsAlert('Error al guardar la configuración');
+      } finally {
+        settingsSaveBtn.disabled = false;
+      }
+    });
+  }
+
+  if (settingsResetBtn) {
+    settingsResetBtn.addEventListener('click', async function () {
+      if (!confirm('¿Restaurar los valores por defecto del .env?')) return;
+      settingsResetBtn.disabled = true;
+      try {
+        const res = await fetch('/api/schedule-config', { method: 'DELETE' });
+        const json = await res.json();
+        if (json.success) {
+          populateForm(json.config);
+          showSettingsAlert('Valores restaurados a los valores por defecto', 'success');
+        }
+      } catch {
+        showSettingsAlert('Error al restaurar la configuración');
+      } finally {
+        settingsResetBtn.disabled = false;
+      }
+    });
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && settingsOverlay && !settingsOverlay.hidden) {
+      closeSettings();
+    }
+  });
 });

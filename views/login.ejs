@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ControlIT - Iniciar sesión</title>
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/app.css">
+  <style>
+    .login-wrapper {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .login-card {
+      width: 100%;
+      max-width: 420px;
+    }
+    .login-brand {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .login-brand h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.25rem;
+    }
+    .login-brand p {
+      color: var(--gray-500);
+      font-size: 0.9rem;
+    }
+    .login-submit {
+      width: 100%;
+      justify-content: center;
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-wrapper">
+    <div class="login-card">
+      <div class="login-brand">
+        <h1><i class="fas fa-clock"></i> ControlIT</h1>
+        <p>Registro de Horas</p>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <i class="fas fa-sign-in-alt"></i>
+          <h2>Iniciar sesión</h2>
+        </div>
+
+        <% if (error) { %>
+        <div class="alert alert-error" style="margin-bottom: 1.25rem;">
+          <i class="fas fa-exclamation-circle"></i>
+          <div><%= error %></div>
+        </div>
+        <% } %>
+
+        <form method="POST" action="/login">
+          <div class="form-group">
+            <label for="username">
+              <i class="fas fa-user"></i> Usuario
+            </label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              required
+              autocomplete="username"
+              placeholder="tu@email.com"
+            >
+          </div>
+
+          <div class="form-group">
+            <label for="password">
+              <i class="fas fa-lock"></i> Contraseña
+            </label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              required
+              autocomplete="current-password"
+              placeholder="••••••••"
+            >
+          </div>
+
+          <button type="submit" class="btn btn-primary login-submit">
+            <i class="fas fa-sign-in-alt"></i> Entrar
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

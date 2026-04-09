@@ -50,9 +50,10 @@ export default function createCalendarRouter() {
     const startISO = startDate.toISOString().slice(0, 10);
     const endISO = today.toISOString().slice(0, 10);
 
+    const credentials = req.session.credentials;
     const [registered, leaveDays] = await Promise.all([
-      getRegisteredDays(startISO, endISO),
-      getLeaveDaysList(),
+      getRegisteredDays(startISO, endISO, credentials),
+      getLeaveDaysList(credentials),
     ]);
 
     const calendarData = buildCalendarData(registered, startDate, today);
@@ -108,7 +109,7 @@ export default function createCalendarRouter() {
     const { startISO, endISO } = req.validatedDates;
     const isDryRunActive = dryRun === 'on';
 
-    const results = await submitHoursRange({ startDate: startISO, endDate: endISO, dryRun: isDryRunActive });
+    const results = await submitHoursRange({ startDate: startISO, endDate: endISO, dryRun: isDryRunActive, credentials: req.session.credentials });
 
     const today = new Date();
     const yearStart = new Date(today.getFullYear(), 0, 1);
@@ -131,7 +132,7 @@ export default function createCalendarRouter() {
     const { startISO, endISO } = req.validatedDates;
     const isDryRun = dryRun === 'on';
 
-    const results = await submitHoursRange({ startDate: startISO, endDate: endISO, dryRun: isDryRun });
+    const results = await submitHoursRange({ startDate: startISO, endDate: endISO, dryRun: isDryRun, credentials: req.session.credentials });
 
     try {
       const today = new Date();
@@ -151,7 +152,7 @@ export default function createCalendarRouter() {
       return res.status(400).json({ success: false, error: 'Fecha inválida' });
     }
 
-    const result = await disableDay(date);
+    const result = await disableDay(date, req.session.credentials);
 
     // Invalidate registered days cache so the calendar refreshes
     try {
