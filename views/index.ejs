@@ -19,22 +19,156 @@
           <h1><i class="fas fa-clock"></i> ControlIT - Registro de Horas</h1>
           <p>Automatiza el registro de tus horas laborales de forma eficiente y segura</p>
         </div>
-        <div class="simulation-toggle">
-          <span class="simulation-toggle__label">
-            <i class="fas fa-bolt"></i> Simulación
-          </span>
-          <button
-            type="button"
-            id="simulation-toggle-btn"
-            class="toggle-switch <%= dryRun ? 'toggle-switch--active' : '' %>"
-            aria-pressed="<%= dryRun %>"
-            aria-label="Modo simulación"
-          >
-            <span class="toggle-switch__thumb"></span>
+        <div class="header-actions">
+          <div class="simulation-toggle">
+            <span class="simulation-toggle__label">
+              <i class="fas fa-bolt"></i> Simulación
+            </span>
+            <button
+              type="button"
+              id="simulation-toggle-btn"
+              class="toggle-switch <%= dryRun ? 'toggle-switch--active' : '' %>"
+              aria-pressed="<%= dryRun %>"
+              aria-label="Modo simulación"
+            >
+              <span class="toggle-switch__thumb"></span>
+            </button>
+          </div>
+          <button type="button" id="settings-btn" class="btn btn-ghost btn-sm" aria-label="Configuración de horario" title="Configuración de horario">
+            <i class="fas fa-cog"></i>
           </button>
+          <% if (typeof currentUser !== 'undefined' && currentUser) { %>
+          <span class="current-user" title="<%= currentUser %>">
+            <i class="fas fa-user-circle"></i>
+            <span class="current-user__name"><%= currentUser %></span>
+          </span>
+          <% } %>
+          <form method="POST" action="/logout" style="display:inline;">
+            <button type="submit" class="btn btn-ghost btn-sm" aria-label="Cerrar sesión" title="Cerrar sesión">
+              <i class="fas fa-sign-out-alt"></i>
+            </button>
+          </form>
         </div>
       </div>
     </header>
+
+    <!-- Settings Modal -->
+    <div id="settings-overlay" class="modal-overlay" hidden aria-modal="true" role="dialog" aria-labelledby="settings-title">
+      <div class="modal-container">
+        <div class="modal-header">
+          <h2 id="settings-title"><i class="fas fa-cog"></i> Configuración de Horario</h2>
+          <button type="button" id="settings-close-btn" class="btn btn-ghost btn-sm" aria-label="Cerrar">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div id="settings-alert"></div>
+          <form id="settings-form">
+            <div class="settings-section">
+              <h3><i class="fas fa-sun"></i> Horario de Invierno (días normales)</h3>
+              <div class="settings-row">
+                <div class="form-group">
+                  <label>Entrada</label>
+                  <div class="time-inputs">
+                    <input type="number" id="s-winter-start-hour" min="0" max="23" class="input-narrow" placeholder="HH">
+                    <span>:</span>
+                    <input type="number" id="s-winter-start-minute" min="0" max="59" class="input-narrow" placeholder="MM">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Duración</label>
+                  <div class="time-inputs">
+                    <input type="number" id="s-winter-length-hours" min="0" max="23" class="input-narrow" placeholder="HH">
+                    <span>h</span>
+                    <input type="number" id="s-winter-length-minutes" min="0" max="59" class="input-narrow" placeholder="MM">
+                    <span>m</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h3><i class="fas fa-utensils"></i> Comida</h3>
+              <div class="settings-row">
+                <div class="form-group">
+                  <label>Inicio</label>
+                  <div class="time-inputs">
+                    <input type="number" id="s-lunch-start-hour" min="0" max="23" class="input-narrow" placeholder="HH">
+                    <span>:</span>
+                    <input type="number" id="s-lunch-start-minute" min="0" max="59" class="input-narrow" placeholder="MM">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Duración</label>
+                  <div class="time-inputs">
+                    <input type="number" id="s-lunch-length-hours" min="0" max="23" class="input-narrow" placeholder="HH">
+                    <span>h</span>
+                    <input type="number" id="s-lunch-length-minutes" min="0" max="59" class="input-narrow" placeholder="MM">
+                    <span>m</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h3><i class="fas fa-umbrella-beach"></i> Horario de Verano (viernes y periodo estival)</h3>
+              <div class="settings-row">
+                <div class="form-group">
+                  <label>Entrada</label>
+                  <div class="time-inputs">
+                    <input type="number" id="s-summer-start-hour" min="0" max="23" class="input-narrow" placeholder="HH">
+                    <span>:</span>
+                    <input type="number" id="s-summer-start-minute" min="0" max="59" class="input-narrow" placeholder="MM">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Duración</label>
+                  <div class="time-inputs">
+                    <input type="number" id="s-summer-length-hours" min="0" max="23" class="input-narrow" placeholder="HH">
+                    <span>h</span>
+                    <input type="number" id="s-summer-length-minutes" min="0" max="59" class="input-narrow" placeholder="MM">
+                    <span>m</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h3><i class="fas fa-calendar-alt"></i> Periodo Estival</h3>
+              <div class="settings-row">
+                <div class="form-group">
+                  <label>Inicio (día/mes)</label>
+                  <div class="time-inputs">
+                    <input type="number" id="s-summer-start-day" min="1" max="31" class="input-narrow" placeholder="DD">
+                    <span>/</span>
+                    <input type="number" id="s-summer-start-month" min="1" max="12" class="input-narrow" placeholder="MM">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Fin (día/mes)</label>
+                  <div class="time-inputs">
+                    <input type="number" id="s-summer-end-day" min="1" max="31" class="input-narrow" placeholder="DD">
+                    <span>/</span>
+                    <input type="number" id="s-summer-end-month" min="1" max="12" class="input-narrow" placeholder="MM">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="settings-reset-btn" class="btn btn-ghost btn-sm">
+            <i class="fas fa-undo"></i> Restaurar valores por defecto
+          </button>
+          <div class="modal-footer-actions">
+            <button type="button" id="settings-cancel-btn" class="btn btn-ghost">Cancelar</button>
+            <button type="button" id="settings-save-btn" class="btn btn-primary">
+              <i class="fas fa-save"></i> Guardar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Loading Overlay -->
     <div id="loading-overlay" class="loading-overlay" style="display: none;">

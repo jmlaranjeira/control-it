@@ -321,7 +321,8 @@ body {
 }
 
 .form-group input[type="date"],
-.form-group input[type="text"] {
+.form-group input[type="text"],
+.form-group input[type="password"] {
   width: 100%;
   padding: 0.75rem 1rem;
   border: 2px solid var(--gray-300);
@@ -332,7 +333,8 @@ body {
 }
 
 .form-group input[type="date"]:focus,
-.form-group input[type="text"]:focus {
+.form-group input[type="text"]:focus,
+.form-group input[type="password"]:focus {
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
@@ -976,4 +978,184 @@ form.validated .form-group input[type="date"]:invalid {
 
 .calendar-day.registered:hover {
   filter: brightness(0.88);
+}
+
+/* ─── Header Actions ───────────────────────────────────────────────── */
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+/* ─── Current user badge ───────────────────────────────────────────── */
+
+.current-user {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--gray-600);
+  background: var(--gray-100);
+  border: 1px solid var(--gray-200);
+  border-radius: 2rem;
+  padding: 0.35rem 0.75rem;
+  max-width: 180px;
+}
+
+.current-user i {
+  color: var(--primary-color);
+  flex-shrink: 0;
+}
+
+.current-user__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── Settings Modal ───────────────────────────────────────────────── */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  backdrop-filter: blur(2px);
+}
+
+.modal-overlay[hidden] { display: none; }
+
+.modal-container {
+  background: white;
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--gray-200);
+  flex-shrink: 0;
+}
+
+.modal-header h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--gray-900);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.modal-header h2 i {
+  color: var(--primary-color);
+}
+
+.modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--gray-200);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.modal-footer-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.settings-section {
+  margin-bottom: 1.5rem;
+}
+
+.settings-section:last-child {
+  margin-bottom: 0;
+}
+
+.settings-section h3 {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gray-500);
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.settings-row {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.settings-row .form-group {
+  flex: 1;
+  min-width: 140px;
+  margin-bottom: 0;
+}
+
+.settings-row .form-group label {
+  font-size: 0.8rem;
+  margin-bottom: 0.4rem;
+  color: var(--gray-600);
+}
+
+.time-inputs {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.time-inputs span {
+  color: var(--gray-500);
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.input-narrow {
+  width: 3.5rem;
+  padding: 0.5rem 0.4rem;
+  border: 2px solid var(--gray-300);
+  border-radius: var(--border-radius);
+  font-size: 0.9rem;
+  text-align: center;
+  background: white;
+  transition: border-color 0.15s;
+}
+
+.input-narrow:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* ─── Number input arrows hide ─────────────────────────────────────── */
+.input-narrow::-webkit-inner-spin-button,
+.input-narrow::-webkit-outer-spin-button {
+  opacity: 1;
 }

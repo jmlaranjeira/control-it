@@ -4,6 +4,7 @@ coverage/
 .nyc_output/
 backups/
 logs/
+data/
 
 # API explorer output — may contain captured credentials/tokens
 docs/api-captured.json

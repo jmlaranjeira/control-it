@@ -3,9 +3,11 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import bodyParser from 'body-parser';
+import session from 'express-session';
 import fs from 'fs';
 import https from 'https';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
+import { requireAuth } from './middleware/auth.js';
 import { logRequest } from './utils/logger.js';
 import { apiLimiter, submitLimiter } from './middleware/rateLimiter.js';
 import { metricsMiddleware } from './utils/metrics.js';
@@ -13,6 +15,8 @@ import { scheduleBackups } from './utils/backup.js';
 import healthRouter from './routes/health.js';
 import cacheRouter from './routes/cache.js';
 import createCalendarRouter from './routes/calendar.js';
+import createAuthRouter from './routes/auth.js';
+import createScheduleRouter from './routes/schedule.js';
 
 const app = express();
 
@@ -23,6 +27,18 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json());
+
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'controlJIJI-dev-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.USE_HTTPS === 'true',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000,
+  },
+}));
 
 // Favicon handler — serves a 1x1 transparent PNG to avoid 404s
 app.get('/favicon.ico', (req, res) => {
@@ -38,11 +54,15 @@ app.use(logRequest);
 app.use('/submit', submitLimiter);
 app.use(apiLimiter);
 
-// Routes
+// Public routes (no auth required)
+app.use(createAuthRouter());
 app.use(healthRouter);
 app.use(cacheRouter);
 
+// Protected routes
+app.use(requireAuth);
 app.use(createCalendarRouter());
+app.use(createScheduleRouter());
 
 // Error handling (must be after routes)
 app.use(notFound);
