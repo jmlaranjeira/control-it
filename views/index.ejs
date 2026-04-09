@@ -189,6 +189,57 @@
       <% } %>
     </div>
 
+    <!-- Leave Days Panel -->
+    <% if (leaveDays && leaveDays.length > 0) { %>
+    <%
+      const today_iso = new Date().toISOString().split('T')[0];
+      const upcomingLeave = leaveDays.filter(l => !l.end || l.end >= today_iso);
+      const pastLeave     = leaveDays.filter(l => l.end && l.end < today_iso);
+    %>
+    <div class="card leave-days-panel">
+      <div class="card-header">
+        <i class="fas fa-umbrella-beach"></i>
+        <h2>Permisos y Ausencias</h2>
+        <% if (upcomingLeave.length > 0) { %>
+        <span class="leave-badge"><%= upcomingLeave.length %> activo<%= upcomingLeave.length !== 1 ? 's' : '' %></span>
+        <% } %>
+      </div>
+      <div class="leave-days-list">
+        <% upcomingLeave.forEach(function(l) { %>
+        <div class="leave-day-item leave-day-item--<%= l.stateCode === 3 ? 'approved' : 'pending' %>">
+          <div class="leave-day-icon">
+            <i class="fas fa-<%= l.stateCode === 3 ? 'check-circle' : 'clock' %>"></i>
+          </div>
+          <div class="leave-day-info">
+            <span class="leave-day-type"><%= l.type %></span>
+            <span class="leave-day-dates">
+              <%= l.start %><% if (l.end && l.end !== l.start) { %> → <%= l.end %><% } %>
+            </span>
+          </div>
+          <span class="leave-day-state"><%= l.state %></span>
+        </div>
+        <% }); %>
+        <% if (pastLeave.length > 0) { %>
+        <details class="leave-days-past">
+          <summary>Ver <%= pastLeave.length %> permiso<%= pastLeave.length !== 1 ? 's' : '' %> pasado<%= pastLeave.length !== 1 ? 's' : '' %></summary>
+          <% pastLeave.forEach(function(l) { %>
+          <div class="leave-day-item leave-day-item--past">
+            <div class="leave-day-icon"><i class="fas fa-history"></i></div>
+            <div class="leave-day-info">
+              <span class="leave-day-type"><%= l.type %></span>
+              <span class="leave-day-dates">
+                <%= l.start %><% if (l.end && l.end !== l.start) { %> → <%= l.end %><% } %>
+              </span>
+            </div>
+            <span class="leave-day-state"><%= l.state %></span>
+          </div>
+          <% }); %>
+        </details>
+        <% } %>
+      </div>
+    </div>
+    <% } %>
+
     <!-- Calendar Section -->
     <% if (calendarData && calendarData.length > 0) { %>
     <div class="card calendar-container">
@@ -299,6 +350,15 @@
       <% }) %>
     </div>
     <% } %>
+  </div>
+
+  <!-- Undo tooltip (shared, moved around via JS) -->
+  <div id="undo-tooltip" class="undo-tooltip" role="dialog" aria-label="Eliminar registro" hidden>
+    <span class="undo-tooltip__text"><i class="fas fa-trash-alt"></i> ¿Eliminar registro?</span>
+    <div class="undo-tooltip__actions">
+      <button id="undo-confirm-btn" class="btn btn-danger btn-xs">Sí, borrar</button>
+      <button id="undo-cancel-btn" class="btn btn-ghost btn-xs">Cancelar</button>
+    </div>
   </div>
 
   <script src="/app.js"></script>

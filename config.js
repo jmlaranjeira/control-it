@@ -6,6 +6,7 @@ export default {
   // API Configuration
   apiBaseUrl: process.env.CONTROLIT_API_BASE_URL || 'https://api.controlit.es/api',
   reportsBaseUrl: process.env.CONTROLIT_REPORTS_BASE_URL || 'https://controlit.es/reports',
+  webBaseUrl: process.env.CONTROLIT_WEB_BASE_URL || 'https://controlit.es',
 
   // Event Type IDs
   comidaEventTypeId: process.env.COMIDA_EVENT_TYPE_ID || 'e8e54e66-a996-48f2-8885-b0dbcacb86eb',

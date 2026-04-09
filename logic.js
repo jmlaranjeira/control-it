@@ -58,6 +58,188 @@ async function postManualRegister(token, startDate, endDate, eventTypeId) {
   return response;
 }
 
+// ─── Calendar days (festivos + vacaciones) via /calendars/get-employee-calendar
+
+async function fetchCalendarDays(token, year) {
+  const response = await fetch(`${config.apiBaseUrl}/calendars/get-employee-calendar?year=${year}`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    logWarn('Failed to fetch calendar days', { status: response.status, year });
+    return {};
+  }
+
+  const data = await response.json();
+  const calendar = data?.Calendar ?? [];
+  const map = {};
+
+  for (const entry of calendar) {
+    // Id format: "dd-MM-yyyy"
+    const parts = String(entry.Id ?? '').split('-');
+    if (parts.length !== 3) continue;
+    const [d, m, y] = parts;
+    const iso = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+
+    if (entry.Text === 'Fiesta' || entry.Color === 'FF0000') {
+      map[iso] = 'holiday';
+    } else if (entry.Text === 'Vacaciones' || entry.Color === '11FF11') {
+      // Only mark as vacation if not already marked as holiday
+      if (!map[iso]) map[iso] = 'vacation';
+    }
+    // DIGITALS (B40000) = días laborales normales de empresa → se ignoran
+  }
+
+  return map;
+}
+
+// ─── Leave days (permisos) via /leave-days/list-all
+
+async function fetchLeaveDays(token) {
+  const response = await fetch(`${config.apiBaseUrl}/leave-days/list-all`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    logWarn('Failed to fetch leave days', { status: response.status });
+    return { map: {}, list: [] };
+  }
+
+  const data = await response.json();
+  const leaveDays = data?.LeaveDays ?? [];
+  const map = {};
+
+  for (const leave of leaveDays) {
+    if (!leave.Start || !leave.End) continue;
+    // Include both pending (State 1) and approved (State 3)
+    const start = DateTime.fromISO(leave.Start);
+    const end   = DateTime.fromISO(leave.End);
+    let cursor  = start.startOf('day');
+    while (cursor <= end.startOf('day')) {
+      map[cursor.toISODate()] = 'leave';
+      cursor = cursor.plus({ days: 1 });
+    }
+  }
+
+  return { map, list: leaveDays };
+}
+
+// ─── Time-off map (combines calendar + leave days)
+
+export async function getTimeOffDaysDetailed() {
+  const cacheKey = cacheKeys.vacationDaysDetailed();
+  const cached = get(cacheKey);
+  if (cached) {
+    logInfo('Serving time-off days from cache');
+    return cached;
+  }
+
+  logInfo('Fetching time-off days from API');
+  const token = await login(config.username, config.password);
+
+  const [calendarMap, { map: leaveMap }] = await Promise.all([
+    fetchCalendarDays(token, DateTime.now().year),
+    fetchLeaveDays(token),
+  ]);
+
+  // Merge: leave days take priority over calendar entries
+  const map = { ...calendarMap, ...leaveMap };
+
+  set(cacheKey, map, 3600);
+  logInfo('Cached time-off days', { count: Object.keys(map).length });
+  return map;
+}
+
+// ─── Leave days list (for the UI panel)
+
+export async function getLeaveDaysList() {
+  const cacheKey = cacheKeys.leaveDays();
+  const cached = get(cacheKey);
+  if (cached) {
+    logInfo('Serving leave days list from cache');
+    return cached;
+  }
+
+  logInfo('Fetching leave days list from API');
+  const token = await login(config.username, config.password);
+  const { list } = await fetchLeaveDays(token);
+
+  // Sort by start date ascending, keep only relevant fields
+  const result = list
+    .map(l => ({
+      id         : l.Id,
+      type       : l.Type,
+      state      : l.LeaveDayState,
+      stateCode  : l.State,
+      start      : l.Start ? l.Start.split('T')[0] : null,
+      end        : l.End   ? l.End.split('T')[0]   : null,
+    }))
+    .filter(l => l.start)
+    .sort((a, b) => a.start.localeCompare(b.start));
+
+  set(cacheKey, result, 1800);
+  return result;
+}
+
+// ─── Disable (undo) a registered day
+
+export async function disableDay(date) {
+  const token = await login(config.username, config.password);
+  const formattedDate = DateTime.fromISO(date).toFormat('dd-MM-yyyy');
+
+  // Fetch events registered for this day
+  const eventsRes = await fetch(
+    `${config.apiBaseUrl}/events/get-events-from-day?day=${formattedDate}`,
+    { headers: buildHeaders(token) }
+  );
+
+  if (!eventsRes.ok) {
+    throw new Error(`No se pudieron obtener los eventos del día ${date} (${eventsRes.status})`);
+  }
+
+  const eventsData = await eventsRes.json();
+  // Handle multiple possible response shapes
+  const eventList = Array.isArray(eventsData)
+    ? eventsData
+    : (eventsData?.Events ?? eventsData?.events ?? eventsData?.Data ?? eventsData?.data ?? []);
+
+  if (eventList.length === 0) {
+    throw new Error('No se encontraron eventos registrados para este día');
+  }
+
+  const results = [];
+
+  for (const event of eventList) {
+    const eventId = event.EventId ?? event.eventId ?? event.Id ?? event.id;
+    if (!eventId) continue;
+
+    const body = new URLSearchParams();
+    body.set('eventId', eventId);
+    body.set('message', 'Eliminado desde controlJIJI');
+
+    const res = await fetch(`${config.webBaseUrl}/disable-event`, {
+      method : 'POST',
+      headers: {
+        'Authorization' : `Bearer ${token}`,
+        'Content-Type'  : 'application/x-www-form-urlencoded',
+      },
+      body: body.toString(),
+    });
+
+    const json = await res.json().catch(() => ({ Success: res.ok }));
+    results.push({ eventId, success: Boolean(json.Success) });
+  }
+
+  const allOk = results.length > 0 && results.every(r => r.success);
+  if (!allOk && results.length > 0) {
+    logWarn('Some events could not be disabled', { date, results });
+  }
+
+  return { date, disabled: results.filter(r => r.success).length, total: results.length };
+}
+
+// ─── Submit hours range
+
 export async function submitHoursRange({ startDate, endDate, dryRun = true }) {
   const start = DateTime.fromISO(startDate);
   const end = DateTime.fromISO(endDate);
@@ -188,68 +370,6 @@ export async function getDetailedEventsByRange(startDate, endDate) {
   return results;
 }
 
-export async function getTimeOffDaysDetailed() {
-  const cacheKey = cacheKeys.vacationDaysDetailed ? cacheKeys.vacationDaysDetailed() : 'vacation_days_detailed';
-
-  // Try to get from cache first
-  const cachedData = get(cacheKey);
-  if (cachedData) {
-    logInfo('Serving detailed time-off days from cache');
-    return cachedData;
-  }
-
-  logInfo('Fetching vacation days from API');
-  const token = await login(config.username, config.password);
-  const response = await fetch(`${config.apiBaseUrl}/vacations/get-vacations-and-onduty-ranges-from-employee`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
-  });
-
-  if (!response.ok) {
-    logWarn('Failed to fetch vacation days from API', { status: response.status });
-    return {};
-  }
-
-  const data = await response.json();
-
-  // Support multiple possible shapes for the vacations list
-  const list =
-    data?.VacationsAnOnDutyCalendarDays || // original (typo?)
-    data?.VacationsAndOnDutyCalendarDays || // corrected spelling
-    data?.vacations ||
-    data?.Days ||
-    [];
-
-  if (!Array.isArray(list)) {
-    logWarn('Invalid vacation days response format');
-    return {};
-  }
-
-  const map = {};
-  for (const day of list) {
-    const raw = day?.Day || day?.Date || day?.date || '';
-    const iso = String(raw).split('T')[0] && /\d{4}-\d{2}-\d{2}/.test(String(raw).split('T')[0])
-      ? String(raw).split('T')[0]
-      : DateTime.fromISO(String(raw)).toISODate();
-    if (!iso) continue;
-
-    if (day?.IsHoliday === true) {
-      map[iso] = 'holiday';
-    } else if (day?.IsLeaveDay === true) {
-      map[iso] = 'leave';
-    } else if (day?.IsWorkedDay === true) {
-      // IsWorkedDay=true dentro de un período de vacaciones indica un día compensado/trabajado
-      // que la API clasifica igualmente como vacaciones a efectos de no registrar horas
-      map[iso] = 'vacation';
-    }
-  }
-
-  set(cacheKey, map, 3600);
-  logInfo('Cached detailed time-off days', { count: Object.keys(map).length });
-  return map;
-}
-
 export async function getVacationDays() {
   // Backward compatibility: return array of all time-off days
   const detailed = await getTimeOffDaysDetailed();
@@ -259,7 +379,6 @@ export async function getVacationDays() {
 export async function getRegisteredDaysFromReport(startDate, endDate) {
   const cacheKey = cacheKeys.registeredDays(startDate, endDate);
 
-  // Try to get from cache first
   const cachedData = get(cacheKey);
   if (cachedData) {
     logInfo('Serving registered days from cache', { startDate, endDate });
@@ -298,7 +417,6 @@ export async function getRegisteredDaysFromReport(startDate, endDate) {
     }
   });
 
-  // Cache for 30 minutes (1800 seconds) since registered days can change
   set(cacheKey, registeredDates, 1800);
   logInfo('Cached registered days', { startDate, endDate, count: registeredDates.length });
 

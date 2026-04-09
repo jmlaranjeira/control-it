@@ -833,3 +833,147 @@ form.validated .form-group input[type="date"]:invalid {
     transform: none;
   }
 }
+
+/* ─── Leave Days Panel ────────────────────────────────────────────── */
+
+.leave-days-panel .card-header {
+  position: relative;
+}
+
+.leave-badge {
+  margin-left: auto;
+  background: var(--info-color, #3b82f6);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+
+.leave-days-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.leave-day-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  background: var(--bg-secondary, #f8fafc);
+  border-left: 3px solid transparent;
+}
+
+.leave-day-item--approved { border-left-color: #22c55e; }
+.leave-day-item--pending  { border-left-color: #f59e0b; }
+.leave-day-item--past     { border-left-color: #94a3b8; opacity: 0.7; }
+
+.leave-day-icon {
+  font-size: 1rem;
+  width: 1.5rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.leave-day-item--approved .leave-day-icon { color: #22c55e; }
+.leave-day-item--pending  .leave-day-icon { color: #f59e0b; }
+.leave-day-item--past     .leave-day-icon { color: #94a3b8; }
+
+.leave-day-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.leave-day-type {
+  font-weight: 600;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.leave-day-dates {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #64748b);
+  font-family: monospace;
+}
+
+.leave-day-state {
+  font-size: 0.7rem;
+  color: var(--text-secondary, #64748b);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.leave-days-past {
+  margin-top: 0.25rem;
+}
+
+.leave-days-past summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--text-secondary, #64748b);
+  padding: 0.4rem 0;
+  user-select: none;
+}
+
+/* ─── Undo Tooltip ─────────────────────────────────────────────────── */
+
+.undo-tooltip {
+  position: fixed;
+  z-index: 1000;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 180px;
+  pointer-events: auto;
+}
+
+.undo-tooltip[hidden] { display: none; }
+
+.undo-tooltip__text {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary, #1e293b);
+}
+
+.undo-tooltip__actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.btn-xs {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+}
+
+.btn-danger {
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+
+.btn-danger:hover { background: #dc2626; }
+
+.calendar-day.registered {
+  cursor: pointer;
+}
+
+.calendar-day.registered:hover {
+  filter: brightness(0.88);
+}
