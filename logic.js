@@ -343,15 +343,15 @@ export async function submitHoursRange({ startDate, endDate, dryRun = true, cred
     day:   scheduleConfig.summerStartDay,
     month: scheduleConfig.summerStartMonth,
     year:  currentYear,
-  });
+  }, { zone: 'Europe/Madrid' });
   const summerEnd = DateTime.fromObject({
     day:   scheduleConfig.summerEndDay,
     month: scheduleConfig.summerEndMonth,
     year:  currentYear,
-  });
+  }, { zone: 'Europe/Madrid' });
 
-  const start = DateTime.fromISO(startDate);
-  const end = DateTime.fromISO(endDate);
+  const start = DateTime.fromISO(startDate, { zone: 'Europe/Madrid' });
+  const end = DateTime.fromISO(endDate, { zone: 'Europe/Madrid' });
   const days = [];
   let cursor = start;
 
