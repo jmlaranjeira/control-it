@@ -1,3 +1,8 @@
+function envInt(name, fallback) {
+  const n = parseInt(process.env[name]);
+  return Number.isNaN(n) ? fallback : n;
+}
+
 export default {
   // Authentication
   username: process.env.CONTROLIT_USERNAME || "",
@@ -16,41 +21,41 @@ export default {
   workSchedule: {
     winter: {
       start: {
-        hour: parseInt(process.env.WINTER_START_HOUR) || 8,
-        minute: parseInt(process.env.WINTER_START_MINUTE) || 0
+        hour:    envInt('WINTER_START_HOUR', 8),
+        minute:  envInt('WINTER_START_MINUTE', 0),
       },
       length: {
-        hours: parseInt(process.env.WINTER_LENGTH_HOURS) || 8,
-        minutes: parseInt(process.env.WINTER_LENGTH_MINUTES) || 30
-      }
+        hours:   envInt('WINTER_LENGTH_HOURS', 8),
+        minutes: envInt('WINTER_LENGTH_MINUTES', 30),
+      },
     },
     lunch: {
       start: {
-        hour: parseInt(process.env.LUNCH_START_HOUR) || 14,
-        minute: parseInt(process.env.LUNCH_START_MINUTE) || 30
+        hour:    envInt('LUNCH_START_HOUR', 14),
+        minute:  envInt('LUNCH_START_MINUTE', 30),
       },
       length: {
-        hours: parseInt(process.env.LUNCH_LENGTH_HOURS) || 0,
-        minutes: parseInt(process.env.LUNCH_LENGTH_MINUTES) || 30
-      }
+        hours:   envInt('LUNCH_LENGTH_HOURS', 0),
+        minutes: envInt('LUNCH_LENGTH_MINUTES', 30),
+      },
     },
     summer: {
       start: {
-        hour: parseInt(process.env.SUMMER_START_HOUR) || 8,
-        minute: parseInt(process.env.SUMMER_START_MINUTE) || 0
+        hour:    envInt('SUMMER_START_HOUR', 8),
+        minute:  envInt('SUMMER_START_MINUTE', 0),
       },
       length: {
-        hours: parseInt(process.env.SUMMER_LENGTH_HOURS) || 7,
-        minutes: parseInt(process.env.SUMMER_LENGTH_MINUTES) || 0
-      }
-    }
+        hours:   envInt('SUMMER_LENGTH_HOURS', 7),
+        minutes: envInt('SUMMER_LENGTH_MINUTES', 0),
+      },
+    },
   },
 
   // Summer Schedule Dates
-  summerStartDay: parseInt(process.env.SUMMER_START_DAY) || 15,
-  summerStartMonth: parseInt(process.env.SUMMER_START_MONTH) || 6,
-  summerEndDay: parseInt(process.env.SUMMER_END_DAY) || 15,
-  summerEndMonth: parseInt(process.env.SUMMER_END_MONTH) || 9,
+  summerStartDay:   envInt('SUMMER_START_DAY', 15),
+  summerStartMonth: envInt('SUMMER_START_MONTH', 6),
+  summerEndDay:     envInt('SUMMER_END_DAY', 15),
+  summerEndMonth:   envInt('SUMMER_END_MONTH', 9),
 
   // Application Settings
   maxDateRangeYears: parseInt(process.env.MAX_DATE_RANGE_YEARS) || 1,

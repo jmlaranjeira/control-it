@@ -462,11 +462,16 @@ document.addEventListener('DOMContentLoaded', async function () {
       if (!confirm('¿Restaurar los valores por defecto del .env?')) return;
       settingsResetBtn.disabled = true;
       try {
-        const res = await fetch('/api/schedule-config', { method: 'DELETE' });
+        const res = await fetch('/api/schedule-config', {
+          method: 'DELETE',
+          headers: { 'Accept': 'application/json' },
+        });
         const json = await res.json();
         if (json.success) {
           populateForm(json.config);
           showSettingsAlert('Valores restaurados a los valores por defecto', 'success');
+        } else {
+          showSettingsAlert(json.error || 'Error al restaurar la configuración');
         }
       } catch {
         showSettingsAlert('Error al restaurar la configuración');
