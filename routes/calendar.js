@@ -82,7 +82,13 @@ export default function createCalendarRouter() {
     let synthesizedResults = [];
     if (showSubmitted && job) {
       const cached = cacheGet(`job_results_${job}`);
-      if (Array.isArray(cached)) synthesizedResults = cached;
+      if (Array.isArray(cached)) {
+        synthesizedResults = cached;
+      } else if (req.session.lastJobId === job && Array.isArray(req.session.lastJobResults)) {
+        synthesizedResults = req.session.lastJobResults;
+        delete req.session.lastJobId;
+        delete req.session.lastJobResults;
+      }
     }
     if (showSubmitted && dryRun && startPrefill && endPrefill && synthesizedResults.length === 0) {
       try {
@@ -138,6 +144,9 @@ export default function createCalendarRouter() {
 
     const jobId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     try { cacheSet(`job_results_${jobId}`, results, 600); } catch {}
+    // Store in session as fallback for when cache is disabled
+    req.session.lastJobId = jobId;
+    req.session.lastJobResults = results;
 
     return res.redirect(303, `/?submitted=1&start=${encodeURIComponent(startISO)}&end=${encodeURIComponent(endISO)}&dry=${dryRun === 'on' ? '1' : '0'}&job=${encodeURIComponent(jobId)}`);
   }));
