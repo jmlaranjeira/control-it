@@ -540,6 +540,89 @@ form.validated .form-group input[type="date"]:invalid {
   color: var(--gray-500);
 }
 
+/* ─── Results Detail Table ─────────────────────────────────────── */
+
+.results-detail {
+  margin-top: 1.25rem;
+}
+
+.results-detail__toggle {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--gray-400);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.4rem 0;
+}
+
+.results-detail__toggle::-webkit-details-marker { display: none; }
+.results-detail__toggle::marker { display: none; content: ''; }
+
+.results-detail__chevron {
+  font-size: 0.65rem;
+  transition: transform 0.2s ease;
+  margin-left: auto;
+}
+
+.results-detail[open] .results-detail__chevron { transform: rotate(180deg); }
+
+.results-detail__table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-top: 0.5rem;
+}
+
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.results-table th {
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gray-400);
+  padding: 0.4rem 0.75rem;
+  border-bottom: 2px solid var(--gray-200);
+  white-space: nowrap;
+}
+
+.results-table td {
+  padding: 0.45rem 0.75rem;
+  border-bottom: 1px solid var(--gray-100);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.results-table__date { font-weight: 600; color: var(--gray-700); }
+
+.results-table__row--dry-run { background: #fffbeb; }
+.results-table__row--submitted { background: #f0fdf4; }
+
+.results-table__badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+
+.results-table__badge--short { background: #fef3c7; color: #92400e; }
+.results-table__badge--full  { background: #e0f2fe; color: #075985; }
+
+@media (max-width: 540px) {
+  .results-table__col-tipo { display: none; }
+}
+
 /* ─── Stats Grid ───────────────────────────────────────────────── */
 
 .stats-grid {

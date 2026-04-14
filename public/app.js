@@ -233,6 +233,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
 
         if (response.status === 200) {
+          const data = await response.json().catch(() => ({}));
           if (!isDryRun) {
             dayEl.classList.replace('pending', 'registered');
             dayEl.dataset.status = 'registered';
@@ -240,11 +241,46 @@ document.addEventListener('DOMContentLoaded', async function () {
             dayEl.classList.add('simulated');
             dayEl.dataset.status = 'simulated';
           }
+          const r = data.results && data.results[0];
+          if (r && r.workStart) showScheduleTooltip(dayEl, r);
         }
       } catch {
         showAlert('Error al registrar el día', 'error');
       }
     });
+  }
+
+  // --- Schedule tooltip ---
+
+  const scheduleTooltip = document.getElementById('schedule-tooltip');
+  let scheduleTooltipTimer = null;
+
+  function showScheduleTooltip(dayEl, r) {
+    if (!scheduleTooltip) return;
+    clearTimeout(scheduleTooltipTimer);
+
+    const lunchRow = r.lunchStart
+      ? `<div class="schedule-tooltip__row"><i class="fas fa-utensils"></i>${r.lunchStart} – ${r.lunchEnd}</div>`
+      : '';
+    const badge = r.isShortDay ? 'Intensiva' : 'Partida';
+
+    scheduleTooltip.querySelector('.schedule-tooltip__content').innerHTML =
+      `<div class="schedule-tooltip__row"><i class="fas fa-sign-in-alt"></i>${r.workStart}</div>` +
+      `<div class="schedule-tooltip__row"><i class="fas fa-sign-out-alt"></i>${r.workEnd}</div>` +
+      lunchRow +
+      `<div class="schedule-tooltip__badge">${badge}</div>`;
+
+    const tooltipW = 150;
+    const rect = dayEl.getBoundingClientRect();
+    let left = rect.left + window.scrollX + rect.width / 2 - tooltipW / 2;
+    let top  = rect.bottom + window.scrollY + 6;
+    left = Math.max(8, Math.min(left, window.innerWidth - tooltipW - 8));
+
+    scheduleTooltip.style.left  = `${left}px`;
+    scheduleTooltip.style.top   = `${top}px`;
+    scheduleTooltip.hidden      = false;
+
+    scheduleTooltipTimer = setTimeout(() => { scheduleTooltip.hidden = true; }, 4000);
   }
 
   // --- Fill-pending button ---

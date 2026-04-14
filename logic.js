@@ -415,7 +415,12 @@ export async function submitHoursRange({ startDate, endDate, dryRun = true, cred
       date: day.toISODate(),
       status: dryRun ? 'dry-run' : 'submitted',
       dryRun: dryRun,
-      isHoliday: (timeOffMap[day.toISODate()] === 'holiday')
+      isHoliday: (timeOffMap[day.toISODate()] === 'holiday'),
+      isShortDay,
+      workStart:  formatTimeHHmm(workStartRaw),
+      workEnd:    formatTimeHHmm(workEnd),
+      lunchStart: lunchStart ? formatTimeHHmm(lunchStart) : null,
+      lunchEnd:   lunchEnd   ? formatTimeHHmm(lunchEnd)   : null,
     });
   }
 
@@ -424,6 +429,10 @@ export async function submitHoursRange({ startDate, endDate, dryRun = true, cred
 
 function randomJitter() {
   return Math.round(Math.random() * config.jitterMinutes);
+}
+
+function formatTimeHHmm(dt) {
+  return dt.toFormat('HH:mm');
 }
 
 export async function getRegisteredDays(startDate, endDate, credentials) {

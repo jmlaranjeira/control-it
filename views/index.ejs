@@ -322,6 +322,43 @@
           <div><strong><%= nSimulated %> días simulados</strong> — no se han enviado datos al sistema.</div>
         </div>
         <% } %>
+        <% const resultsWithTimes = results.filter(r => r.workStart); %>
+        <% if (resultsWithTimes.length > 0) { %>
+        <details class="results-detail" open>
+          <summary class="results-detail__toggle">
+            <i class="fas fa-list"></i> Detalle por día (<%= resultsWithTimes.length %>)
+            <i class="fas fa-chevron-down results-detail__chevron"></i>
+          </summary>
+          <div class="results-detail__table-wrap">
+            <table class="results-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Entrada</th>
+                  <th>Salida</th>
+                  <th>Comida</th>
+                  <th class="results-table__col-tipo">Tipo</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% resultsWithTimes.forEach(function(r) { %>
+                <tr class="results-table__row results-table__row--<%= r.status %>">
+                  <td class="results-table__date"><%= r.date %></td>
+                  <td><%= r.workStart %></td>
+                  <td><%= r.workEnd %></td>
+                  <td><%= r.lunchStart ? (r.lunchStart + ' – ' + r.lunchEnd) : '—' %></td>
+                  <td class="results-table__col-tipo">
+                    <span class="results-table__badge results-table__badge--<%= r.isShortDay ? 'short' : 'full' %>">
+                      <%= r.isShortDay ? 'Intensiva' : 'Partida' %>
+                    </span>
+                  </td>
+                </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        </details>
+        <% } %>
       </div>
       <% } %>
     </div>
@@ -502,6 +539,7 @@
                  const dayNumber = day.date.slice(8);
                  const isToday = day.date === today;
                  const isDryRun = Array.isArray(results) && results.some(r => r.date === day.date && r.dryRun);
+                 const matchingResult = Array.isArray(results) && results.find(r => r.date === day.date && r.workStart);
                  const classes = ['calendar-day'];
                  if (day.status) classes.push(day.status);
                  if (day.isHoliday) classes.push('holiday');
@@ -519,7 +557,11 @@
                    day.status === 'weekend' ? 'Fin de semana' :
                    day.status === 'future' ? '' :
                    'Sin registro';
-                 const ariaLabel = `${dayNumber} de ${monthLabel}: ${statusText}${isDryRun ? ' (Simulado)' : ''}`;
+                 const timeSuffix = matchingResult
+                   ? ` | ${matchingResult.workStart} - ${matchingResult.workEnd}` +
+                     (matchingResult.lunchStart ? ` (Comida: ${matchingResult.lunchStart}-${matchingResult.lunchEnd})` : '')
+                   : '';
+                 const ariaLabel = `${dayNumber} de ${monthLabel}: ${statusText}${isDryRun ? ' (Simulado)' : ''}${timeSuffix}`;
             %>
               <div
                 class="<%= classes.join(' ') %>"
@@ -539,6 +581,11 @@
       </div>
     </div>
     <% } %>
+  </div>
+
+  <!-- Schedule tooltip (shown after single-day simulation) -->
+  <div id="schedule-tooltip" class="schedule-tooltip" role="status" aria-live="polite" hidden>
+    <div class="schedule-tooltip__content"></div>
   </div>
 
   <!-- Undo tooltip (shared, moved around via JS) -->
