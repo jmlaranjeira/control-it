@@ -251,19 +251,116 @@ document.addEventListener('DOMContentLoaded', async function () {
         return;
       }
 
-      // Pending day → register
+      // Pending day → show confirm tooltip
       if (status !== 'pending') return;
+      showConfirmTooltip(dayEl);
+    });
+  }
+
+  // --- Confirm register tooltip ---
+
+  const confirmTooltip     = document.getElementById('confirm-tooltip');
+  const confirmRegisterBtn = document.getElementById('confirm-register-btn');
+  const confirmCancelBtn   = document.getElementById('confirm-cancel-btn');
+  const confirmWorkStart   = document.getElementById('confirm-work-start');
+  const confirmWorkEnd     = document.getElementById('confirm-work-end');
+  const confirmLunchStart  = document.getElementById('confirm-lunch-start');
+  const confirmLunchEnd    = document.getElementById('confirm-lunch-end');
+  const confirmLunchRow    = document.getElementById('confirm-lunch-row');
+  const confirmLunchLabel  = document.getElementById('confirm-lunch-label');
+  const confirmDateLabel   = document.getElementById('confirm-date-label');
+  let   confirmTargetDay   = null;
+
+  function hideConfirmTooltip() {
+    if (confirmTooltip) confirmTooltip.hidden = true;
+    confirmTargetDay = null;
+  }
+
+  function positionConfirmTooltip(dayEl) {
+    const rect     = dayEl.getBoundingClientRect();
+    const tooltipW = 230;
+    let left = rect.left + rect.width / 2 - tooltipW / 2;
+    let top  = rect.bottom + 6;
+    left = Math.max(8, Math.min(left, window.innerWidth - tooltipW - 8));
+    confirmTooltip.style.left = `${left}px`;
+    confirmTooltip.style.top  = `${top}px`;
+  }
+
+  async function showConfirmTooltip(dayEl) {
+    if (!confirmTooltip) return;
+    confirmTargetDay = dayEl;
+
+    // Reset fields
+    confirmWorkStart.value  = '';
+    confirmWorkEnd.value    = '';
+    confirmLunchStart.value = '';
+    confirmLunchEnd.value   = '';
+    if (confirmLunchRow)  confirmLunchRow.hidden  = true;
+    if (confirmLunchLabel) confirmLunchLabel.hidden = true;
+
+    positionConfirmTooltip(dayEl);
+    confirmTooltip.hidden = false;
+    confirmRegisterBtn.focus();
+
+    // Show formatted date in title
+    const date = dayEl.dataset.date;
+    if (confirmDateLabel && date) {
+      const [y, m, d] = date.split('-');
+      confirmDateLabel.textContent = `${d}/${m}/${y}`;
+    }
+
+    // Fetch preview hours and populate fields
+    try {
+      const res  = await fetch(`/day-preview?date=${encodeURIComponent(date)}`);
+      const json = await res.json().catch(() => ({}));
+      if (json.success) {
+        confirmWorkStart.value = json.workStart || '';
+        confirmWorkEnd.value   = json.workEnd   || '';
+        if (json.lunchStart) {
+          confirmLunchStart.value = json.lunchStart;
+          confirmLunchEnd.value   = json.lunchEnd;
+          if (confirmLunchRow)   confirmLunchRow.hidden   = false;
+          if (confirmLunchLabel) confirmLunchLabel.hidden = false;
+        }
+        positionConfirmTooltip(dayEl);
+      }
+    } catch { /* show empty fields on error */ }
+  }
+
+  if (confirmCancelBtn) confirmCancelBtn.addEventListener('click', hideConfirmTooltip);
+
+  document.addEventListener('click', function (e) {
+    if (confirmTooltip && !confirmTooltip.hidden &&
+        !confirmTooltip.contains(e.target) &&
+        !e.target.closest('.calendar-day.pending')) {
+      hideConfirmTooltip();
+    }
+  });
+
+  if (confirmRegisterBtn) {
+    confirmRegisterBtn.addEventListener('click', async function () {
+      if (!confirmTargetDay) return;
+      const dayEl    = confirmTargetDay;
+      const date     = dayEl.dataset.date;
+      const isDryRun = document.getElementById('dryRun').checked;
+      hideConfirmTooltip();
+
+      confirmRegisterBtn.disabled = true;
+      clearAlerts();
 
       startDateInput.value = date;
       endDateInput.value   = date;
 
-      const body = new URLSearchParams();
-      body.set('startDate', date);
-      body.set('endDate', date);
-      const isDryRun = document.getElementById('dryRun').checked;
-      if (isDryRun) body.set('dryRun', 'on');
-
       try {
+        const body = new URLSearchParams();
+        body.set('startDate', date);
+        body.set('endDate',   date);
+        if (isDryRun) body.set('dryRun', 'on');
+        if (confirmWorkStart.value) body.set('workStart', confirmWorkStart.value);
+        if (confirmWorkEnd.value)   body.set('workEnd',   confirmWorkEnd.value);
+        if (confirmLunchStart.value) body.set('lunchStart', confirmLunchStart.value);
+        if (confirmLunchEnd.value)   body.set('lunchEnd',   confirmLunchEnd.value);
+
         const response = await fetch('/submit-day', {
           method : 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
@@ -284,6 +381,8 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
       } catch {
         showAlert('Error al registrar el día', 'error');
+      } finally {
+        confirmRegisterBtn.disabled = false;
       }
     });
   }

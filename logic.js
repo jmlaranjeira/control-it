@@ -395,9 +395,47 @@ export async function disableDay(date, credentials, message = 'Registro equivoca
   return { date, disabled: results.filter(r => r.success).length, total: results.length };
 }
 
+// ─── Preview hours for a single day (no registration, no API call)
+
+export function previewDayHours(date) {
+  const scheduleConfig = getScheduleConfig();
+  const currentYear = DateTime.now().year;
+  const summerStart = DateTime.fromObject({ day: scheduleConfig.summerStartDay, month: scheduleConfig.summerStartMonth, year: currentYear }, { zone: 'Europe/Madrid' });
+  const summerEnd   = DateTime.fromObject({ day: scheduleConfig.summerEndDay,   month: scheduleConfig.summerEndMonth,   year: currentYear }, { zone: 'Europe/Madrid' });
+
+  const day = DateTime.fromISO(date, { zone: 'Europe/Madrid' });
+  const isFriday   = day.weekday === 5;
+  const isSummer   = day >= summerStart && day <= summerEnd;
+  const isShortDay = isSummer || isFriday;
+
+  let workStartRaw, workEnd, lunchStart, lunchEnd;
+
+  if (isShortDay) {
+    const t = scheduleConfig.workSchedule.summer.start;
+    workStartRaw = day.set({ hour: t.hour, minute: t.minute });
+    workEnd      = workStartRaw.plus(scheduleConfig.workSchedule.summer.length);
+  } else {
+    const t     = scheduleConfig.workSchedule.winter.start;
+    const lunch = scheduleConfig.workSchedule.lunch.start;
+    workStartRaw = day.set({ hour: t.hour, minute: t.minute });
+    workEnd      = workStartRaw.plus(scheduleConfig.workSchedule.winter.length).plus(scheduleConfig.workSchedule.lunch.length);
+    lunchStart   = day.set({ hour: lunch.hour, minute: lunch.minute });
+    lunchEnd     = lunchStart.plus(scheduleConfig.workSchedule.lunch.length);
+  }
+
+  return {
+    date,
+    isShortDay,
+    workStart:  formatTimeHHmm(workStartRaw),
+    workEnd:    formatTimeHHmm(workEnd),
+    lunchStart: lunchStart ? formatTimeHHmm(lunchStart) : null,
+    lunchEnd:   lunchEnd   ? formatTimeHHmm(lunchEnd)   : null,
+  };
+}
+
 // ─── Submit hours range
 
-export async function submitHoursRange({ startDate, endDate, dryRun = true, credentials }) {
+export async function submitHoursRange({ startDate, endDate, dryRun = true, credentials, overrides = {} }) {
   const scheduleConfig = getScheduleConfig();
   const currentYear = DateTime.now().year;
   const summerStart = DateTime.fromObject({
@@ -441,13 +479,27 @@ export async function submitHoursRange({ startDate, endDate, dryRun = true, cred
   const results = [];
 
   for (const day of days) {
+    const isoDate  = day.toISODate();
+    const ov       = overrides[isoDate] || {};
     const isFriday = day.weekday === 5;
     const isSummer = day >= summerStart && day <= summerEnd;
     const isShortDay = isSummer || isFriday;
 
     let workStartRaw, workEnd, lunchStart, lunchEnd;
 
-    if (isShortDay) {
+    // Apply user overrides if present, otherwise use schedule + jitter
+    if (ov.workStart && ov.workEnd) {
+      const [wsh, wsm] = ov.workStart.split(':').map(Number);
+      const [weh, wem] = ov.workEnd.split(':').map(Number);
+      workStartRaw = day.set({ hour: wsh, minute: wsm });
+      workEnd      = day.set({ hour: weh, minute: wem });
+      if (ov.lunchStart && ov.lunchEnd) {
+        const [lsh, lsm] = ov.lunchStart.split(':').map(Number);
+        const [leh, lem] = ov.lunchEnd.split(':').map(Number);
+        lunchStart = day.set({ hour: lsh, minute: lsm });
+        lunchEnd   = day.set({ hour: leh, minute: lem });
+      }
+    } else if (isShortDay) {
       const t = scheduleConfig.workSchedule.summer.start;
       workStartRaw = day.set({ hour: t.hour, minute: t.minute + randomJitter() });
       workEnd = workStartRaw.plus(scheduleConfig.workSchedule.summer.length);
@@ -473,10 +525,10 @@ export async function submitHoursRange({ startDate, endDate, dryRun = true, cred
     }
 
     results.push({
-      date: day.toISODate(),
+      date: isoDate,
       status: dryRun ? 'dry-run' : 'submitted',
       dryRun: dryRun,
-      isHoliday: (timeOffMap[day.toISODate()] === 'holiday'),
+      isHoliday: (timeOffMap[isoDate] === 'holiday'),
       isShortDay,
       workStart:  formatTimeHHmm(workStartRaw),
       workEnd:    formatTimeHHmm(workEnd),

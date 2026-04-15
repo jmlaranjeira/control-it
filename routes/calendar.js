@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { submitHoursRange, getRegisteredDays, getLeaveDaysList, getVacationRequestsList, disableDay, getEventsForDay } from '../logic.js';
+import { submitHoursRange, getRegisteredDays, getLeaveDaysList, getVacationRequestsList, disableDay, getEventsForDay, previewDayHours } from '../logic.js';
 import { catchAsync, validateDateRange } from '../middleware/errorHandler.js';
 import { get as cacheGet, set as cacheSet, del as cacheDel, cacheKeys } from '../utils/cache.js';
 
@@ -152,11 +152,21 @@ export default function createCalendarRouter() {
   }));
 
   router.post('/submit-day', validateDateRange, catchAsync(async (req, res) => {
-    const { dryRun } = req.body;
+    const { dryRun, workStart, workEnd, lunchStart, lunchEnd } = req.body;
     const { startISO, endISO } = req.validatedDates;
     const isDryRun = dryRun === 'on';
 
-    const results = await submitHoursRange({ startDate: startISO, endDate: endISO, dryRun: isDryRun, credentials: req.session.credentials });
+    // Build per-day overrides if custom hours were provided
+    const overrides = {};
+    if (workStart && workEnd && /^\d{2}:\d{2}$/.test(workStart) && /^\d{2}:\d{2}$/.test(workEnd)) {
+      overrides[startISO] = { workStart, workEnd };
+      if (lunchStart && lunchEnd && /^\d{2}:\d{2}$/.test(lunchStart) && /^\d{2}:\d{2}$/.test(lunchEnd)) {
+        overrides[startISO].lunchStart = lunchStart;
+        overrides[startISO].lunchEnd   = lunchEnd;
+      }
+    }
+
+    const results = await submitHoursRange({ startDate: startISO, endDate: endISO, dryRun: isDryRun, credentials: req.session.credentials, overrides });
 
     try {
       const today = new Date();
@@ -167,6 +177,16 @@ export default function createCalendarRouter() {
 
     return res.json({ success: true, dryRun: isDryRun, results });
   }));
+
+  // Preview hours for a pending day (no registration)
+  router.get('/day-preview', (req, res) => {
+    const { date } = req.query;
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ success: false, error: 'Fecha inválida' });
+    }
+    const preview = previewDayHours(date);
+    return res.json({ success: true, ...preview });
+  });
 
   // Detail for a registered day (hours)
   router.get('/day-detail', catchAsync(async (req, res) => {

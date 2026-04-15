@@ -183,6 +183,13 @@ details.leave-days-panel[open] .card-header__chevron {
 
 .undo-tooltip[hidden] { display: none; }
 
+.confirm-tooltip { min-width: 220px; }
+
+.confirm-tooltip__date {
+  color: var(--accent, #16a34a);
+  font-weight: 700;
+}
+
 .undo-tooltip__hours {
   font-size: 0.8rem;
   color: var(--text-secondary, #64748b);
@@ -247,6 +254,62 @@ details.leave-days-panel[open] .card-header__chevron {
 .undo-tooltip__actions {
   display: flex;
   gap: 0.4rem;
+}
+
+/* ─── Confirm Register Tooltip ─────────────────────────────────── */
+
+.confirm-tooltip__fields {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.35rem 0.6rem;
+  padding: 0.2rem 0;
+}
+
+.confirm-tooltip__label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--text-secondary, #64748b);
+  white-space: nowrap;
+}
+
+.confirm-tooltip__label[hidden] { display: none; }
+
+.confirm-tooltip__label i {
+  width: 12px;
+  text-align: center;
+  color: var(--accent, #16a34a);
+}
+
+.confirm-tooltip__time-input {
+  font-size: 0.8rem;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 5px;
+  background: var(--input-bg, #f8fafc);
+  color: var(--text-primary, #1e293b);
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.confirm-tooltip__time-input:focus {
+  border-color: var(--accent, #16a34a);
+}
+
+.confirm-tooltip__time-range {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+}
+
+.confirm-tooltip__time-range .confirm-tooltip__time-input {
+  flex: 1;
+  min-width: 0;
 }
 
 /* ─── Settings Modal ───────────────────────────────────────────── */
