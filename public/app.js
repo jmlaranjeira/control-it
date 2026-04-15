@@ -426,10 +426,12 @@ document.addEventListener('DOMContentLoaded', async function () {
   if (fillPendingBtn) {
     fillPendingBtn.addEventListener('click', function () {
       const firstPending = fillPendingBtn.dataset.firstPending;
-      const todayISO = new Date().toISOString().split('T')[0];
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayISO = yesterday.toISOString().split('T')[0];
       if (firstPending) {
         startDateInput.value = firstPending;
-        endDateInput.value = todayISO;
+        endDateInput.value = yesterdayISO;
         form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
         form.submit();
       }
