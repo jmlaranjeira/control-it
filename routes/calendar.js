@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { submitHoursRange, getRegisteredDays, getLeaveDaysList, getVacationRequestsList, disableDay } from '../logic.js';
+import { submitHoursRange, getRegisteredDays, getLeaveDaysList, getVacationRequestsList, disableDay, getEventsForDay } from '../logic.js';
 import { catchAsync, validateDateRange } from '../middleware/errorHandler.js';
 import { get as cacheGet, set as cacheSet, del as cacheDel, cacheKeys } from '../utils/cache.js';
 
@@ -168,15 +168,25 @@ export default function createCalendarRouter() {
     return res.json({ success: true, dryRun: isDryRun, results });
   }));
 
+  // Detail for a registered day (hours)
+  router.get('/day-detail', catchAsync(async (req, res) => {
+    const { date } = req.query;
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ success: false, error: 'Fecha inválida' });
+    }
+    const detail = await getEventsForDay(date, req.session.credentials);
+    return res.json({ success: true, ...detail });
+  }));
+
   // Undo a registered day — calls disable-event for all events of that date
   router.post('/disable-day', catchAsync(async (req, res) => {
-    const { date } = req.body;
+    const { date, message } = req.body;
 
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return res.status(400).json({ success: false, error: 'Fecha inválida' });
     }
 
-    const result = await disableDay(date, req.session.credentials);
+    const result = await disableDay(date, req.session.credentials, message);
 
     // Invalidate registered days cache so the calendar refreshes
     try {

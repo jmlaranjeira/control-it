@@ -276,9 +276,63 @@ export async function getLeaveDaysList(credentials) {
   return result;
 }
 
+// ─── Get events detail for a registered day
+
+export async function getEventsForDay(date, credentials) {
+  const creds = getCreds(credentials);
+  const token = await login(creds.username, creds.password);
+  const formattedDate = DateTime.fromISO(date).toFormat('dd-MM-yyyy');
+
+  const response = await fetch(
+    `${config.apiBaseUrl}/events/get-events-from-day?day=${formattedDate}`,
+    { headers: buildHeaders(token) }
+  );
+
+  if (!response.ok) {
+    throw new Error(`No se pudieron obtener los eventos del día ${date} (${response.status})`);
+  }
+
+  const eventsData = await response.json();
+  // Response shape: { Events: [{ Principal: { EventTypeId, StartDate, EndDate }, Events: [{ EventTypeId, StartDate, EndDate }] }] }
+  const rawList = Array.isArray(eventsData)
+    ? eventsData
+    : (eventsData?.Events ?? eventsData?.events ?? eventsData?.Data ?? eventsData?.data ?? []);
+
+  // Collect all events: Principal + nested Events[]
+  const eventList = [];
+  for (const item of rawList) {
+    if (item?.Principal) eventList.push(item.Principal);
+    else eventList.push(item);
+    for (const sub of (item?.Events ?? [])) eventList.push(sub);
+  }
+
+  let workStart = null, workEnd = null, lunchStart = null, lunchEnd = null;
+
+  for (const ev of eventList) {
+    const typeId = ev.EventTypeId ?? ev.eventTypeId;
+    const start = ev.StartDate ?? ev.startDate;
+    const end   = ev.EndDate   ?? ev.endDate;
+    if (!start || !end) continue;
+
+    const startDT = DateTime.fromISO(start, { zone: 'Europe/Madrid' });
+    const endDT   = DateTime.fromISO(end,   { zone: 'Europe/Madrid' });
+    const fmt = (dt) => dt.toFormat('HH:mm');
+
+    if (typeId === config.jornadaEventTypeId) {
+      workStart = fmt(startDT);
+      workEnd   = fmt(endDT);
+    } else if (typeId === config.comidaEventTypeId) {
+      lunchStart = fmt(startDT);
+      lunchEnd   = fmt(endDT);
+    }
+  }
+
+  return { date, workStart, workEnd, lunchStart, lunchEnd };
+}
+
 // ─── Disable (undo) a registered day
 
-export async function disableDay(date, credentials) {
+export async function disableDay(date, credentials, message = 'Registro equivocado') {
   const creds = getCreds(credentials);
   const token = await login(creds.username, creds.password);
   const formattedDate = DateTime.fromISO(date).toFormat('dd-MM-yyyy');
@@ -294,10 +348,17 @@ export async function disableDay(date, credentials) {
   }
 
   const eventsData = await eventsRes.json();
-  // Handle multiple possible response shapes
-  const eventList = Array.isArray(eventsData)
+  // Response shape: { Events: [{ Principal: { EventId, ... }, Events: [{ EventId, ... }] }] }
+  const rawList = Array.isArray(eventsData)
     ? eventsData
     : (eventsData?.Events ?? eventsData?.events ?? eventsData?.Data ?? eventsData?.data ?? []);
+
+  const eventList = [];
+  for (const item of rawList) {
+    if (item?.Principal) eventList.push(item.Principal);
+    else eventList.push(item);
+    for (const sub of (item?.Events ?? [])) eventList.push(sub);
+  }
 
   if (eventList.length === 0) {
     throw new Error('No se encontraron eventos registrados para este día');
@@ -311,7 +372,7 @@ export async function disableDay(date, credentials) {
 
     const body = new URLSearchParams();
     body.set('eventId', eventId);
-    body.set('message', 'Eliminado desde controlJIJI');
+    body.set('message', message);
 
     const res = await fetch(`${config.webBaseUrl}/disable-event`, {
       method : 'POST',

@@ -590,7 +590,9 @@
 
   <!-- Undo tooltip (shared, moved around via JS) -->
   <div id="undo-tooltip" class="undo-tooltip" role="dialog" aria-label="Eliminar registro" hidden>
+    <div id="undo-tooltip__hours" class="undo-tooltip__hours" hidden></div>
     <span class="undo-tooltip__text"><i class="fas fa-trash-alt"></i> ¿Eliminar registro?</span>
+    <input id="undo-message-input" class="undo-tooltip__message-input" type="text" placeholder="Motivo (opcional)" maxlength="200" />
     <div class="undo-tooltip__actions">
       <button id="undo-confirm-btn" class="btn btn-danger btn-xs">Sí, borrar</button>
       <button id="undo-cancel-btn" class="btn btn-ghost btn-xs">Cancelar</button>

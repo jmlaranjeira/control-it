@@ -126,28 +126,64 @@ document.addEventListener('DOMContentLoaded', async function () {
   const undoCancelBtn     = document.getElementById('undo-cancel-btn');
   let   undoTargetDay     = null;
 
+  const undoMessageInput = document.getElementById('undo-message-input');
+
   function hideUndoTooltip() {
     if (undoTooltip) undoTooltip.hidden = true;
+    if (undoMessageInput) undoMessageInput.value = '';
     undoTargetDay = null;
   }
 
-  function showUndoTooltip(dayEl) {
+  const undoHoursEl = document.getElementById('undo-tooltip__hours');
+
+  function positionUndoTooltip(dayEl) {
+    const rect = dayEl.getBoundingClientRect();
+    const tooltipW = 190;
+    let left = rect.left + rect.width / 2 - tooltipW / 2;
+    let top  = rect.bottom + 6;
+    left = Math.max(8, Math.min(left, window.innerWidth - tooltipW - 8));
+    undoTooltip.style.left = `${left}px`;
+    undoTooltip.style.top  = `${top}px`;
+  }
+
+  async function showUndoTooltip(dayEl) {
     if (!undoTooltip) return;
     undoTargetDay = dayEl;
 
-    // Position near the day cell
-    const rect = dayEl.getBoundingClientRect();
-    const tooltipW = 190;
-    let left = rect.left + window.scrollX + rect.width / 2 - tooltipW / 2;
-    let top  = rect.bottom + window.scrollY + 6;
+    // Show skeleton immediately so tooltip has stable size before data arrives
+    if (undoHoursEl) {
+      undoHoursEl.innerHTML =
+        `<div class="undo-tooltip__hours-row undo-tooltip__hours-row--skeleton"><span></span></div>` +
+        `<div class="undo-tooltip__hours-row undo-tooltip__hours-row--skeleton"><span></span></div>`;
+      undoHoursEl.hidden = false;
+    }
 
-    // Keep within viewport
-    left = Math.max(8, Math.min(left, window.innerWidth - tooltipW - 8));
-
-    undoTooltip.style.left  = `${left}px`;
-    undoTooltip.style.top   = `${top}px`;
-    undoTooltip.hidden      = false;
+    // Position after skeleton is visible (stable size)
+    positionUndoTooltip(dayEl);
+    undoTooltip.hidden = false;
     undoConfirmBtn.focus();
+
+    // Fetch and replace skeleton with real hours
+    const date = dayEl.dataset.date;
+    if (date && undoHoursEl) {
+      try {
+        const res = await fetch(`/day-detail?date=${encodeURIComponent(date)}`);
+        const json = await res.json().catch(() => ({}));
+        if (json.success && json.workStart) {
+          const lunchRow = json.lunchStart
+            ? `<div class="undo-tooltip__hours-row"><i class="fas fa-utensils"></i>${json.lunchStart} – ${json.lunchEnd}</div>`
+            : '';
+          undoHoursEl.innerHTML =
+            `<div class="undo-tooltip__hours-row"><i class="fas fa-sign-in-alt"></i>${json.workStart}</div>` +
+            `<div class="undo-tooltip__hours-row"><i class="fas fa-sign-out-alt"></i>${json.workEnd}</div>` +
+            lunchRow;
+        } else {
+          undoHoursEl.hidden = true;
+        }
+      } catch {
+        undoHoursEl.hidden = true;
+      }
+    }
   }
 
   if (undoCancelBtn) undoCancelBtn.addEventListener('click', hideUndoTooltip);
@@ -164,8 +200,9 @@ document.addEventListener('DOMContentLoaded', async function () {
   if (undoConfirmBtn) {
     undoConfirmBtn.addEventListener('click', async function () {
       if (!undoTargetDay) return;
-      const dayEl = undoTargetDay;
-      const date  = dayEl.dataset.date;
+      const dayEl  = undoTargetDay;
+      const date   = dayEl.dataset.date;
+      const message = (undoMessageInput?.value.trim()) || 'Registro equivocado';
       hideUndoTooltip();
 
       undoConfirmBtn.disabled = true;
@@ -174,6 +211,7 @@ document.addEventListener('DOMContentLoaded', async function () {
       try {
         const body = new URLSearchParams();
         body.set('date', date);
+        body.set('message', message);
 
         const response = await fetch('/disable-day', {
           method : 'POST',
@@ -272,8 +310,8 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     const tooltipW = 150;
     const rect = dayEl.getBoundingClientRect();
-    let left = rect.left + window.scrollX + rect.width / 2 - tooltipW / 2;
-    let top  = rect.bottom + window.scrollY + 6;
+    let left = rect.left + rect.width / 2 - tooltipW / 2;
+    let top  = rect.bottom + 6;
     left = Math.max(8, Math.min(left, window.innerWidth - tooltipW - 8));
 
     scheduleTooltip.style.left  = `${left}px`;

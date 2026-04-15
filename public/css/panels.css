@@ -183,10 +183,65 @@ details.leave-days-panel[open] .card-header__chevron {
 
 .undo-tooltip[hidden] { display: none; }
 
+.undo-tooltip__hours {
+  font-size: 0.8rem;
+  color: var(--text-secondary, #64748b);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+
+.undo-tooltip__hours[hidden] { display: none; }
+
+.undo-tooltip__hours-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.undo-tooltip__hours-row i {
+  width: 12px;
+  text-align: center;
+  color: var(--accent, #16a34a);
+}
+
+.undo-tooltip__hours-row--skeleton span {
+  display: block;
+  width: 80px;
+  height: 0.75rem;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.2s infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 .undo-tooltip__text {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-primary, #1e293b);
+}
+
+.undo-tooltip__message-input {
+  font-size: 0.78rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 6px;
+  background: var(--input-bg, #f8fafc);
+  color: var(--text-primary, #1e293b);
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.undo-tooltip__message-input:focus {
+  border-color: var(--accent, #16a34a);
 }
 
 .undo-tooltip__actions {
