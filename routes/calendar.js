@@ -22,7 +22,7 @@ function buildCalendarData(registered, startDate, today) {
     const iso = localDateStr(cursor);
     const day = cursor.getDay(); // 0=Sun, 6=Sat
     const isWeekend = day === 0 || day === 6;
-    const isFuture = iso > todayStr;
+    const isFuture = iso >= todayStr;
     const find = registered.find(r => r.date === iso);
     const isHoliday = !isWeekend && !!find?.isHoliday;
     let status;
